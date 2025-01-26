@@ -1,70 +1,56 @@
-// components/ParticlesComponent.jsx
-import { useCallback } from 'react'
-import { loadFull } from 'tsparticles'
-import Particles from 'react-tsparticles'
+import React, { useEffect } from 'react';
 
 const ParticlesComponent = () => {
-  const particlesInit = useCallback(async engine => {
-    await loadFull(engine)
-  }, [])
-
-  return (
-    <Particles
-      init={particlesInit}
-      options={{
-        background: { color: { value: 'transparent' } },
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js';
+    script.async = true;
+    script.onload = () => {
+      window.particlesJS('particles-js', {
         particles: {
-          number: { value: 80, density: { enable: true, value_area: 800 } },
-          color: { value: ['#6366f1', '#8b5cf6', '#d946ef'] },
-          shape: {
-            type: 'circle',
-            stroke: { width: 0, color: '#000' },
-            polygon: { nb_sides: 5 }
-          },
-          opacity: {
-            value: 0.5,
-            random: false,
-            anim: { enable: false, speed: 1, opacity_min: 0.1, sync: false }
-          },
-          size: {
-            value: 3,
-            random: true,
-            anim: { enable: false, speed: 40, size_min: 0.1, sync: false }
-          },
+          number: { value: 50, density: { enable: true, value_area: 1000 } },
+          color: { value: '#ffffff' },
+          shape: { type: 'circle' },
+          opacity: { value: 0.3, random: false },
+          size: { value: 2, random: true },
           line_linked: {
             enable: true,
             distance: 150,
-            color: '#8b5cf6',
-            opacity: 0.4,
+            color: '#ffffff',
+            opacity: 0.2,
             width: 1
           },
           move: {
             enable: true,
-            speed: 6,
+            speed: 1,
             direction: 'none',
             random: false,
             straight: false,
             out_mode: 'out',
             bounce: false,
-            attract: { enable: false, rotateX: 600, rotateY: 1200 }
           }
         },
         interactivity: {
           detect_on: 'canvas',
           events: {
             onhover: { enable: true, mode: 'repulse' },
-            onclick: { enable: true, mode: 'push' },
+            onclick: { enable: false },
             resize: true
           },
           modes: {
-            repulse: { distance: 100, duration: 0.4 },
-            push: { particles_nb: 4 }
+            repulse: {
+              distance: 100,
+              duration: 0.4
+            }
           }
         },
         retina_detect: true
-      }}
-    />
-  )
-}
+      });
+    };
+    document.body.appendChild(script);
+  }, []);
 
-export default ParticlesComponent
+  return <div id="particles-js" className="particles"></div>;
+};
+
+export default ParticlesComponent;

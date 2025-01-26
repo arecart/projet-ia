@@ -3,70 +3,55 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import '@/app/globals.css';
 
-const GenerationForm = dynamic(() => import('@/components/NeuroForm'), {
+// Import dynamique des composants pour éviter les problèmes d'hydratation
+const GenerationForm = dynamic(() => import('@/components/GenerationForm'), {
   ssr: false,
   loading: () => (
-    <div className="cyber-loader">
-      <div className="hologram-beam" />
-      <span className="neon-text-sm">INITIALIZING NEURO CORE...</span>
+    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
     </div>
   )
 });
 
-const NeuroParticles = dynamic(() => import('@/components/NeuroParticles'), { 
+const Particles = dynamic(() => import('@/components/ParticlesComponent'), { 
   ssr: false,
-  loading: () => (
-    <div className="cyber-bg-pattern animate-pulse" />
-  )
+  loading: () => null
 });
 
-export default function NeuroLab() {
+export default function Home() {
   const [modelsReady, setModelsReady] = useState(false);
-  const [systemStatus, setSystemStatus] = useState('BOOTING...');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const initializeNeuralEngine = async () => {
+    setMounted(true);
+    
+    const initializeModels = async () => {
       try {
-        const response = await fetch('/api/neuro/init');
-        const data = await response.json();
-        
-        setSystemStatus('SYNCING QUANTUM MATRIX...');
-        await new Promise(r => setTimeout(r, 1500));
-        
-        setSystemStatus('ACTIVATING NEURO CORES...');
-        await new Promise(r => setTimeout(r, 1000));
-        
+        const res = await fetch('/api/init-models');
+        if (!res.ok) throw new Error('Échec du chargement des modèles');
         setModelsReady(true);
-        setSystemStatus('READY');
       } catch (error) {
-        setSystemStatus('SYSTEM ERROR');
-        console.error('NeuroCore failure:', error);
+        console.error('Erreur lors de initialisation des modèles:', error);
+        setModelsReady(false);
       }
     };
 
-    initializeNeuralEngine();
-  }, []);
+    if (mounted) {
+      initializeModels();
+    }
+
+    return () => setMounted(false);
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   return (
-    <main className="neuro-container">
-      <div className="cyber-dimension">
-        <NeuroParticles />
-        
-        <div className="neuro-interface">
-          <div className="system-status neon-text-outline">
-            {systemStatus}
-          </div>
-          
-          <GenerationForm modelsReady={modelsReady} />
-          
-          <div className="cyber-hud">
-            <div className="hud-line animate-neon-pulse" />
-            <div className="neuro-stats">
-              <span className="neon-badge">v2.3.1</span>
-              <span className="neon-badge">WEBGPU ENABLED</span>
-            </div>
-          </div>
-        </div>
+    <main className="relative min-h-screen w-full overflow-hidden bg-gray-900">
+      <div className="absolute inset-0 z-0">
+        <Particles />
+      </div>
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <GenerationForm modelsReady={modelsReady} />
       </div>
     </main>
   );

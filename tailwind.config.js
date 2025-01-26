@@ -1,3 +1,4 @@
+// tailwind.config.js
 module.exports = {
   content: [
     './app/**/*.{js,ts,jsx,tsx}',
@@ -7,63 +8,69 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'jetbrains-mono': ['var(--font-jetbrains-mono)'],
-        'space-grotesk': ['var(--font-space-grotesk)']
+        'jetbrains-mono': ['var(--font-jetbrains-mono)']
       },
       colors: {
-        'neural-dark': '#0a0a1a',
-        'cyber-purple': '#8b5cf6',
-        'neon-pink': '#ff00ff',
-        'hologram-blue': '#00f3ff',
         gray: {
-          750: '#2d2d4a',
-          900: '#17172b',
-        }
+          750: '#2d2d2d', 
+          900: '#171717',
+        },
+        'deep-purple': {
+          900: '#1a1a2e',
+          800: '#2a2a4a',
+        },
       },
       backgroundImage: {
-        'cyber-gradient': 'linear-gradient(135deg, #8b5cf6 0%, #ff00ff 50%, #00f3ff 100%)',
-        'neural-pattern': "url('/neural-grid.svg')"
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'glass-effect': 'linear-gradient(145deg, rgba(39, 39, 68, 0.8) 0%, rgba(74, 58, 95, 0.8) 100%)'
       },
       boxShadow: {
-        'cyber': '0 0 40px -10px rgba(139, 92, 246, 0.4)',
-        'neon': '0 0 30px -5px rgba(255, 0, 255, 0.3)'
+        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+        'glow': '0 0 20px rgba(139, 92, 246, 0.3)'
       },
       animation: {
-        'cyber-pulse': 'cyberPulse 3s ease infinite',
-        'neon-border': 'neonBorderFlow 5s linear infinite',
-        'hologram': 'hologramFloat 6s ease-in-out infinite'
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'fade-in-up': 'fadeInUp 0.5s ease-out',
+        'gradient-flow': 'gradientBG 15s ease infinite',
+        'border-flow': 'borderFlow 3s linear infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'spin': 'spin 1s linear infinite',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
       },
       keyframes: {
-        cyberPulse: {
-          '0%, 100%': { opacity: 1 },
-          '50%': { opacity: 0.6 }
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 }
         },
-        neonBorderFlow: {
-          '0%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-          '100%': { backgroundPosition: '0% 50%' }
+        fadeInUp: {
+          '0%': { opacity: 0, transform: 'translateY(20px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' }
         },
-        hologramFloat: {
-          '0%, 100%': { transform: 'translateY(0) rotate(-1deg)' },
-          '50%': { transform: 'translateY(-20px) rotate(1deg)' }
+        gradientBG: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' }
+        },
+        borderFlow: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' }
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' }
         }
       },
       backdropBlur: {
-        'cyber': '12px'
+        xs: '2px'
       }
     },
     container: {
       center: true,
-      padding: '2rem',
-      screens: {
-        xl: '1280px'
-      }
+      padding: '1.5rem'
     }
   },
   plugins: [
     require('@tailwindcss/forms'),
     require('@tailwindcss/typography'),
-    require('tailwind-scrollbar')({ nocompatible: true }),
-    require('@tailwindcss/aspect-ratio')
+    require('tailwind-scrollbar')
   ]
 }

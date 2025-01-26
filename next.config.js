@@ -1,11 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@xenova/transformers'], // Correction ici
-  webpack: (config) => {
-    config.externals.push({
-      canvas: 'canvas',
-      encoding: 'encoding'
-    });
+  experimental: {
+    appDir: true, // Activer le répertoire de l'application
+    turbo: true, // Activer Turbopack
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback.fs = false;
+    }
     return config;
   }
 };

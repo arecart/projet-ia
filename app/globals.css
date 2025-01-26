@@ -1,98 +1,261 @@
-/* app/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --neon-purple: #8b5cf6;
-  --cyber-pink: #ff00ff;
-  --matrix-green: #00ff9d;
-  --hologram-blue: #00f3ff;
+  --primary-gradient: linear-gradient(to right, #6366f1, #8b5cf6, #d946ef);
+  --glass-background: rgba(17, 17, 17, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.2);
 }
 
+/* Base styles */
 @layer base {
   body {
-    @apply bg-gray-900 text-gray-100 antialiased overflow-x-hidden;
-    font-family: var(--font-space-grotesk);
+    @apply bg-gray-900 text-gray-100 antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  ::-webkit-scrollbar {
-    @apply w-2;
+  h1, h2, h3 {
+    @apply font-bold tracking-tight;
   }
 
-  ::-webkit-scrollbar-track {
-    @apply bg-gray-800;
+  input, textarea, select {
+    @apply bg-gray-800 rounded-lg px-4 py-2.5 text-sm transition-all 
+           focus:ring-2 focus:ring-purple-500 focus:outline-none
+           placeholder-gray-400 border border-gray-700;
   }
 
-  ::-webkit-scrollbar-thumb {
-    @apply bg-gradient-to-b from-purple-500 to-pink-500 rounded-full;
+  button {
+    @apply transition-all duration-300 ease-in-out;
   }
 }
 
+* {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Custom components */
 @layer components {
-  .cyber-card {
-    @apply relative p-8 rounded-2xl backdrop-blur-xl border border-gray-700;
-    background: linear-gradient(152deg, rgba(17,17,17,0.9) 0%, rgba(39,39,68,0.7) 100%);
-    box-shadow: 0 0 40px -10px rgba(139, 92, 246, 0.2);
-    
+  .glass-morphism {
+    @apply backdrop-blur-lg border shadow-lg;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent;
+  }
+
+  .modern-button {
+    @apply px-6 py-3 rounded-lg font-semibold text-sm tracking-wide 
+           bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 
+           transform hover:scale-[1.03] active:scale-95 shadow-lg
+           transition-all duration-200;
+    background: linear-gradient(45deg, #4f46e5, #7c3aed, #a855f7);
+    background-size: 200% auto;
+    animation: shine 3s linear infinite;
+    opacity: 0.9;
+    border: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .modern-button::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+    transform: rotate(45deg);
+    transition: all 0.3s ease;
+  }
+
+  .modern-button:hover::before {
+    transform: rotate(45deg) translate(50%, 50%);
+  }
+
+  .animated-border {
+    @apply relative overflow-hidden;
     &::before {
       content: '';
-      @apply absolute inset-0 bg-[url('/grid.svg')] opacity-20;
-    }
-    
-    &::after {
-      content: '';
-      @apply absolute -inset-[2px] bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl -z-10;
-      animation: border-glow 3s ease infinite;
+      @apply absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500;
+      animation: borderFlow 3s linear infinite;
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      padding: 1px;
     }
   }
 
-  .neon-text {
-    text-shadow: 0 0 10px theme('colors.purple.500'),
-                 0 0 20px theme('colors.pink.500'),
-                 0 0 30px theme('colors.pink.500');
+  .custom-scrollbar {
+    @apply scrollbar-thin scrollbar-thumb-purple-700 scrollbar-track-gray-800;
   }
 
-  .cyber-button {
-    @apply px-8 py-4 rounded-lg font-bold uppercase tracking-wider 
-           bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 
-           hover:to-pink-700 transform hover:scale-105 transition-all 
-           duration-300 shadow-[0_0_20px_theme('colors.purple.500/30')] 
-           hover:shadow-[0_0_30px_theme('colors.pink.500/40')]
-           before:absolute before:inset-0 before:bg-[url('/noise.png')] before:opacity-20;
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
   }
 
-  .matrix-loader {
-    @apply h-1 bg-gradient-to-r from-purple-500 to-pink-500;
-    animation: loader 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .error-message {
+    @apply text-red-400 bg-red-900/20 p-3 rounded-lg border border-red-500;
+  }
+
+  /* Model selector styles */
+  .model-selector {
+    @apply flex items-center justify-between px-4 py-2.5 rounded-lg bg-gray-800 
+           hover:bg-gray-700 transition-colors cursor-pointer border border-gray-700;
+  }
+
+  .model-selector.active {
+    @apply bg-purple-900/30 border-purple-500;
+  }
+
+  .dynamic-background {
+    background: linear-gradient(45deg, #1a1a2e, #16213e, #1f2937, #374151);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+  }
+
+  .hover-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .hover-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .footer-text {
+    color: #ffffff;
+  }
+
+  .footer-heart {
+    color: #ff0000;
   }
 }
 
-@keyframes border-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+/* Animations */
+@keyframes borderFlow {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-@keyframes hologram {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes loader {
-  0% { width: 0%; }
-  50% { width: 100%; }
-  100% { width: 0%; left: 100%; }
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
 }
 
-.animate-cyber {
-  animation: hologram 10s linear infinite;
+/* Custom utilities */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
 
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Particles overlay fix */
 canvas {
   @apply fixed inset-0 z-0;
+}
+
+/* Result text styling */
+.result-text {
+  @apply text-gray-100 leading-relaxed whitespace-pre-wrap break-words font-mono;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+/* Token counter badge */
+.token-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full bg-purple-900/50 text-purple-300 
+         text-xs font-mono mt-3 border border-purple-800;
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem;
+  }
+  
+  .glass-morphism {
+    padding: 1.5rem;
+  }
+  
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.title-gradient {
+  background: linear-gradient(to right, #60a5fa, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: all 0.3s ease;
+}
+
+.title-gradient:hover {
+  transform: scale(1.02);
+  background: linear-gradient(to right, #93c5fd, #c084fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.input-focus {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-focus:focus {
+  border-color: rgba(167, 139, 250, 0.5);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
 }

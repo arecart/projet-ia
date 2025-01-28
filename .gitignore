@@ -9,10 +9,11 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+hash-password.js
 
 # testing
 /coverage
-
+/scripts
 # next.js
 /.next/
 /out/

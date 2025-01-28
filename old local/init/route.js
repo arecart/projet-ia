@@ -1,4 +1,4 @@
-import { initializeModels } from '@/lib/transformers';
+import { initializeModels } from '@/old local/transformers';
 
 export async function GET() {
   try {

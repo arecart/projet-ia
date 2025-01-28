@@ -1,4 +1,4 @@
-import { getModel } from '@/lib/transformers';
+import { getModel } from '@/old local/transformers';
 
 export async function POST(request) {
   const { prompt, model } = await request.json();

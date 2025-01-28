@@ -167,6 +167,18 @@
   .footer-heart {
     color: #ff0000;
   }
+
+  .loading-button {
+    @apply relative flex items-center justify-center gap-2;
+  }
+
+  .loading-spinner {
+    @apply animate-spin h-5 w-5 text-white;
+  }
+
+  .loading-button:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
 }
 
 /* Animations */

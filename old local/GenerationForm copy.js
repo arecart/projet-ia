@@ -6,7 +6,7 @@ export default function GenerationForm() {
     error: null,
     result: null,
   });
-  const [generationType, setGenerationType] = useState('gpt');
+  const [generationType, setGenerationType] = useState('local');
   const [prompt, setPrompt] = useState('');
   const [charCount, setCharCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,13 @@ export default function GenerationForm() {
 
     try {
       let response;
-      if (generationType === 'api') {
+      if (generationType === 'local') {
+        response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'Xenova/distilgpt2', prompt }),
+        });
+      } else if (generationType === 'api') {
         response = await fetch('/api/generate-api', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -90,7 +96,13 @@ export default function GenerationForm() {
 
           <div className="mb-6">
             <label className="block font-semibold text-lg mb-3">Mode de génération :</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <button 
+                onClick={() => handleGenerationTypeChange('local')} 
+                className={`generation-type-btn ${generationType === 'local' ? 'modern-button' : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800'} py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg`}
+              >
+                💻 Local
+              </button>
               <button 
                 onClick={() => handleGenerationTypeChange('api')} 
                 className={`generation-type-btn ${generationType === 'api' ? 'modern-button' : 'bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800'} py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 font-semibold shadow-lg`}
@@ -104,6 +116,14 @@ export default function GenerationForm() {
                 🤖 GPT
               </button>
             </div>
+          </div>
+
+          <div className={`mb-6 ${generationType === 'local' ? '' : 'hidden'} animate__animated animate__fadeIn`}>
+            <label className="block font-semibold text-lg mb-3">Modèle local :</label>
+            <select className="w-full p-3 border rounded-xl bg-gray-800/80 text-white input-focus transition-all duration-300">
+              <option value="Xenova/distilgpt2">DistilGPT-2 (léger)</option>
+              <option value="Xenova/gpt2">GPT-2</option>
+            </select>
           </div>
 
           <div className={`mb-6 ${generationType === 'api' ? '' : 'hidden'} animate__animated animate__fadeIn`}>

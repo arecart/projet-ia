@@ -1,9 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@xenova/transformers'], // Correction ici
+  serverExternalPackages: ['@xenova/transformers'],
   experimental: {
-    appDir: true, // Activer le répertoire de l'application
-    turbo: true, // Activer Turbopack
+    turbo: {
+      // Configuration de Turbopack
+      resolveExtensions: [
+        '.js',
+        '.jsx',
+        '.ts',
+        '.tsx',
+        '.json',
+      ],
+      moduleIdStrategy: 'deterministic',
+    },
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {

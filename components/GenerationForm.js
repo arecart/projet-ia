@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ParticlesComponent from './ParticlesComponent';
 
-export default function GenerationForm() {
+export default function GenerationForm({ onLogout }) {
   const [formState, setFormState] = useState({
     error: null,
     result: null,
@@ -45,13 +45,13 @@ export default function GenerationForm() {
     try {
       let response;
       if (generationType === 'api') {
-        response = await fetch('/api/generate-api', {
+        response = await fetch('/api/generate/api', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ model: 'mistral', prompt }),
         });
       } else if (generationType === 'gpt') {
-        response = await fetch('/api/generate-gpt', {
+        response = await fetch('/api/generate/gpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt }),
@@ -79,6 +79,16 @@ export default function GenerationForm() {
     <div className="relative min-h-screen flex flex-col">
       <div className="dynamic-background"></div>
       <ParticlesComponent />
+
+      {/* Bouton de déconnexion */}
+      <div className="absolute top-4 right-4 z-20">
+        <button
+          onClick={onLogout}
+          className="modern-button text-white py-2 px-4 rounded"
+        >
+          Déconnexion
+        </button>
+      </div>
 
       <main className="flex-grow flex items-center justify-center p-6 relative z-10">
         <div className="glass-morphism text-white shadow-2xl rounded-2xl p-8 w-full max-w-lg animate__animated animate__fadeIn hover-card">

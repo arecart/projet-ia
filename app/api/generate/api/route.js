@@ -1,9 +1,8 @@
-import { queryHuggingFace } from '@/old local/ai';
+import { queryHuggingFace } from '@/app/ai';
 
 const MODELS = {
   mistral: "mistralai/Mistral-7B-Instruct-v0.3",
   zephyr: "HuggingFaceH4/zephyr-7b-beta",
-  fallback: "Xenova/distilgpt2"
 };
 
 export async function POST(request) {

@@ -1,4 +1,4 @@
-import { openai } from '@/old local/ai';
+import { openai } from '@/app/ai';
 
 export async function POST(request) {
   const { prompt } = await request.json();

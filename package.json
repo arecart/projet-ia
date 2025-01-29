@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/client": "^6.2.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
@@ -32,14 +31,16 @@
     "mysql2": "^3.12.0",
     "next": "15.1.6",
     "openai": "^4.80.1",
-    "prisma": "^6.2.1",
     "prop-types": "^15.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.5.1",
+    "react-icons": "^5.4.0",
     "react-tsparticles": "^2.12.2",
     "rimraf": "^6.0.1",
     "tailwind-scrollbar": "^3.1.0",
-    "tsparticles": "^3.8.0"
+    "tsparticles": "^3.8.0",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

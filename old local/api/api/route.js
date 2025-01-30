@@ -1,4 +1,4 @@
-import { queryHuggingFace } from '@/app/ai';
+import { queryHuggingFace } from '@/old local/ai';
 
 const MODELS = {
   mistral: "mistralai/Mistral-7B-Instruct-v0.3",

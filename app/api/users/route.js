@@ -1,19 +1,54 @@
 import { NextResponse } from 'next/server';
 import pool from '@/app/db';
 
-// GET tous les utilisateurs
 export async function GET() {
   let conn;
   try {
     conn = await pool.getConnection();
-    console.log('Connexion établie');
+    
+    const rows = await conn.query(`
+      SELECT
+        id,
+        username,
+        role,
+        login_count,
+        last_login,
+        created_at,
+        max_requests,     /* Ajout des champs quota */
+        request_count,
+        last_request_reset
+      FROM users
+    `);
+    conn.release();
 
-    const users = await conn.query('SELECT id, username, created_at FROM users');
-    console.log('Utilisateurs trouvés:', users);
+    const users = Array.isArray(rows) ? rows : [rows];
 
-    return NextResponse.json(users);
-  } catch (error) {
-    console.error('Erreur détaillée:', error);
+    // Ajouter des informations sur le quota pour chaque utilisateur
+    const usersWithQuotaInfo = users.map(user => {
+      const now = new Date();
+      const resetTime = user.last_request_reset 
+        ? new Date(user.last_request_reset)
+        : new Date(0);
+      
+      const timeUntilReset = Math.max(0, 3 * 60 * 60 * 1000 - (now - resetTime));
+      
+      return {
+        ...user,
+        quotaInfo: {
+          current: user.request_count,
+          max: user.max_requests,
+          remaining: Math.max(0, user.max_requests - user.request_count),
+          resetIn: timeUntilReset,
+          resetInHours: Math.ceil(timeUntilReset / (60 * 60 * 1000))
+        }
+      };
+    });
+
+    console.log('RESULT GET /api/users =>', usersWithQuotaInfo);
+
+    return NextResponse.json(usersWithQuotaInfo);
+  } catch (err) {
+    console.error('Erreur lors de la récupération des utilisateurs:', err);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des utilisateurs' },
       { status: 500 }
@@ -23,20 +58,25 @@ export async function GET() {
   }
 }
 
-// POST nouvel utilisateur
 export async function POST(request) {
   let conn;
   try {
-    const { username, password } = await request.json();
+    const { username, password, maxRequests = 10 } = await request.json(); // Ajout d'un quota par défaut
     conn = await pool.getConnection();
 
-    const result = await conn.query(
-      'INSERT INTO users (username, password) VALUES (?, ?)',
-      [username, password]
+    const [result] = await conn.query(
+      'INSERT INTO users (username, password, max_requests) VALUES (?, ?, ?)',
+      [username, password, maxRequests]
     );
 
-    const newUser = await conn.query(
-      'SELECT id, username, created_at FROM users WHERE id = ?',
+    const [newUser] = await conn.query(
+      `
+        SELECT 
+          id, username, role, login_count, last_login, created_at,
+          max_requests, request_count, last_request_reset
+        FROM users
+        WHERE id = ?
+      `,
       [result.insertId]
     );
 
@@ -57,6 +97,10 @@ export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID manquant' }, { status: 400 });
+    }
 
     conn = await pool.getConnection();
     await conn.query('DELETE FROM users WHERE id = ?', [id]);

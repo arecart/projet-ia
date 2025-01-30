@@ -21,7 +21,7 @@ export default function HomePage() {
         if (data.error) {
           router.push('/login');
         } else {
-          setIsAdmin(data.username === 'admin');
+          setIsAdmin(data.role === 'admin');
         }
       } catch (error) {
         console.error('Erreur lors de la vérification du rôle:', error);

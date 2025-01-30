@@ -1,2 +1,28 @@
-CREATE TABLE users (   id INT AUTO_INCREMENT PRIMARY KEY,   username VARCHAR(255) NOT NULL UNIQUE,   password VARCHAR(255) NOT NULL,   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP );
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  role VARCHAR(255) DEFAULT 'user',
+  last_login TIMESTAMP NULL DEFAULT NULL,
+  login_count INT DEFAULT 0,
+  request_count INT DEFAULT 0,
+  last_request_reset TIMESTAMP NULL DEFAULT NULL,
+  max_requests INT DEFAULT 10
+);
+
+
+
 CREATE TABLE invites (     id INT PRIMARY KEY AUTO_INCREMENT,     token VARCHAR(255) UNIQUE NOT NULL,     expires_at DATETIME NOT NULL,     used BOOLEAN DEFAULT FALSE,     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP );
+
+
+CREATE TABLE token_usage (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    model_name VARCHAR(100) NOT NULL,
+    prompt_tokens INTEGER,
+    completion_tokens INTEGER,
+    total_tokens INTEGER,
+    estimated_cost DECIMAL(10,6),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

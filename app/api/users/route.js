@@ -6,47 +6,55 @@ export async function GET() {
   try {
     conn = await pool.getConnection();
     
-    const rows = await conn.query(`
+    // Récupérer les utilisateurs
+    const users = await conn.query(`
       SELECT
         id,
         username,
         role,
         login_count,
         last_login,
-        created_at,
-        max_requests,     /* Ajout des champs quota */
-        request_count,
-        last_request_reset
+        created_at
       FROM users
     `);
-    conn.release();
 
-    const users = Array.isArray(rows) ? rows : [rows];
+    // Récupérer les quotas pour chaque utilisateur
+    const usersWithQuotas = await Promise.all(users.map(async (user) => {
+      const quotas = await conn.query(`
+        SELECT
+          model_name,
+          request_count,
+          max_requests,
+          last_request_reset
+        FROM user_model_quotas
+        WHERE user_id = ?
+      `, [user.id]);
 
-    // Ajouter des informations sur le quota pour chaque utilisateur
-    const usersWithQuotaInfo = users.map(user => {
-      const now = new Date();
-      const resetTime = user.last_request_reset 
-        ? new Date(user.last_request_reset)
-        : new Date(0);
-      
-      const timeUntilReset = Math.max(0, 3 * 60 * 60 * 1000 - (now - resetTime));
-      
-      return {
-        ...user,
-        quotaInfo: {
-          current: user.request_count,
-          max: user.max_requests,
-          remaining: Math.max(0, user.max_requests - user.request_count),
+      const quotasWithInfo = quotas.map(quota => {
+        const now = new Date();
+        const resetTime = quota.last_request_reset 
+          ? new Date(quota.last_request_reset)
+          : new Date(0);
+        
+        const timeUntilReset = Math.max(0, 3 * 60 * 60 * 1000 - (now - resetTime));
+        
+        return {
+          ...quota,
+          remaining: Math.max(0, quota.max_requests - quota.request_count),
           resetIn: timeUntilReset,
           resetInHours: Math.ceil(timeUntilReset / (60 * 60 * 1000))
-        }
+        };
+      });
+
+      return {
+        ...user,
+        quotas: quotasWithInfo
       };
-    });
+    }));
 
-    console.log('RESULT GET /api/users =>', usersWithQuotaInfo);
+    console.log('RESULT GET /api/users =>', usersWithQuotas);
 
-    return NextResponse.json(usersWithQuotaInfo);
+    return NextResponse.json(usersWithQuotas);
   } catch (err) {
     console.error('Erreur lors de la récupération des utilisateurs:', err);
     return NextResponse.json(
@@ -61,27 +69,58 @@ export async function GET() {
 export async function POST(request) {
   let conn;
   try {
-    const { username, password, maxRequests = 10 } = await request.json(); // Ajout d'un quota par défaut
+    const { username, password, role = 'user', quotas } = await request.json();
     conn = await pool.getConnection();
 
-    const [result] = await conn.query(
-      'INSERT INTO users (username, password, max_requests) VALUES (?, ?, ?)',
-      [username, password, maxRequests]
+    // Démarrer une transaction
+    await conn.beginTransaction();
+
+    // Insérer l'utilisateur
+    const [userResult] = await conn.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, password, role]
     );
 
+    const userId = userResult.insertId;
+
+    // Insérer les quotas pour chaque modèle
+    const defaultQuotas = [
+      { model_name: 'gpt-3.5-turbo', max_requests: 10 },
+      { model_name: 'mistral-small-latest', max_requests: 10 }
+    ];
+
+    const quotasToInsert = quotas || defaultQuotas;
+
+    await Promise.all(quotasToInsert.map(quota => 
+      conn.query(
+        'INSERT INTO user_model_quotas (user_id, model_name, max_requests) VALUES (?, ?, ?)',
+        [userId, quota.model_name, quota.max_requests]
+      )
+    ));
+
+    // Valider la transaction
+    await conn.commit();
+
+    // Récupérer l'utilisateur créé avec ses quotas
     const [newUser] = await conn.query(
-      `
-        SELECT 
-          id, username, role, login_count, last_login, created_at,
-          max_requests, request_count, last_request_reset
-        FROM users
-        WHERE id = ?
-      `,
-      [result.insertId]
+      'SELECT id, username, role, login_count, last_login, created_at FROM users WHERE id = ?',
+      [userId]
     );
 
-    return NextResponse.json(newUser[0], { status: 201 });
+    const userQuotas = await conn.query(
+      'SELECT model_name, request_count, max_requests, last_request_reset FROM user_model_quotas WHERE user_id = ?',
+      [userId]
+    );
+
+    return NextResponse.json({
+      ...newUser[0],
+      quotas: userQuotas
+    }, { status: 201 });
+
   } catch (error) {
+    if (conn) {
+      await conn.rollback();
+    }
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création de l\'utilisateur' },
@@ -103,10 +142,18 @@ export async function DELETE(request) {
     }
 
     conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // Supprimer d'abord les quotas (la contrainte ON DELETE CASCADE s'en chargera automatiquement)
     await conn.query('DELETE FROM users WHERE id = ?', [id]);
+
+    await conn.commit();
 
     return NextResponse.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
+    if (conn) {
+      await conn.rollback();
+    }
     console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la suppression de l\'utilisateur' },

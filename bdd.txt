@@ -6,14 +6,9 @@ CREATE TABLE users (
   role VARCHAR(255) DEFAULT 'user',
   last_login TIMESTAMP NULL DEFAULT NULL,
   login_count INT DEFAULT 0,
-  request_count INT DEFAULT 0,
-  last_request_reset TIMESTAMP NULL DEFAULT NULL,
-  max_requests INT DEFAULT 10
+  is_active BOOLEAN DEFAULT TRUE
 );
 
-
-
-CREATE TABLE invites (     id INT PRIMARY KEY AUTO_INCREMENT,     token VARCHAR(255) UNIQUE NOT NULL,     expires_at DATETIME NOT NULL,     used BOOLEAN DEFAULT FALSE,     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP );
 
 
 CREATE TABLE token_usage (
@@ -25,4 +20,43 @@ CREATE TABLE token_usage (
     total_tokens INTEGER,
     estimated_cost DECIMAL(10,6),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE user_model_quotas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  model_name VARCHAR(255) NOT NULL,
+  request_count INT DEFAULT 0,
+  max_requests INT DEFAULT 10,
+  last_request_reset TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  restoration_applied DECIMAL(3,2) DEFAULT 0,
+  baseline_request_count INT DEFAULT NULL,
+  uq_user_model (user_id, model_name)
+);
+
+
+
+-- Table pour les sessions de chat
+CREATE TABLE ChatSession (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  session_name VARCHAR(255) DEFAULT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  user_id INT NOT NULL DEFAULT 0
+);
+
+
+-- Table pour les messages de chat
+CREATE TABLE ChatMessage (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  session_id INT NOT NULL,
+  user_id INT NOT NULL,
+  role VARCHAR(20) NOT NULL,
+  message TEXT NOT NULL,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (session_id) REFERENCES ChatSession(id),
+  INDEX idx_session_id (session_id),
+  INDEX idx_timestamp (timestamp)
 );

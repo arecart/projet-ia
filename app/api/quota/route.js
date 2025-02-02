@@ -1,16 +1,13 @@
+// app/api/quota/route.js
 import pool from '@/app/db';
 import { NextResponse } from 'next/server';
 import { verify } from '@/utils/jwt';
 
 async function verifyAuth(request) {
   const token = request.cookies.get('token')?.value;
-  console.log('Token found:', !!token); // Log token presence
   if (!token) return null;
-  
   try {
-    const decoded = await verify(token);
-    console.log('Decoded token:', decoded); // Log decoded content
-    return decoded;
+    return await verify(token);
   } catch (err) {
     console.error('Token verification error:', err);
     return null;
@@ -20,36 +17,76 @@ async function verifyAuth(request) {
 export async function GET(request) {
   try {
     const decoded = await verifyAuth(request);
-    if (!decoded) return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-
-    // Récupération brute du résultat
-    const [resultSet] = await pool.execute(
-      `SELECT request_count, max_requests 
-       FROM users 
-       WHERE id = ?`,
-      [decoded.userId]
-    );
-
-    console.log('Type de résultat:', typeof resultSet); // Devrait être 'object'
-    console.log('Est un tableau ?', Array.isArray(resultSet)); // Devrait être true
-
-    // Correction cruciale ici :
-    const results = Array.isArray(resultSet) ? resultSet : [resultSet];
-    
-    if (results.length === 0) {
-      console.log('Aucun résultat trouvé pour ID:', decoded.userId);
-      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
+    if (!decoded) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const userData = results[0];
-    console.log('Données utilisateur:', userData);
+    // Récupération du paramètre "model" ou "provider" et normalisation
+    const { searchParams } = new URL(request.url);
+    let modelParam =
+      searchParams.get('model') ||
+      searchParams.get('provider') ||
+      'gpt-3.5-turbo';
+    if (modelParam === 'gpt') {
+      modelParam = 'gpt-3.5-turbo';
+    } else if (modelParam === 'mistral') {
+      modelParam = 'mistral-small-latest';
+    }
+
+    // Exécution de la requête SQL
+    const result = await pool.execute(
+      `SELECT id, request_count, max_requests, last_request_reset 
+       FROM user_model_quotas 
+       WHERE user_id = ? AND model_name = ?`,
+      [decoded.userId, modelParam]
+    );
+
+    // Pour MariaDB, result[0] doit contenir les lignes, mais on vérifie :
+    let rows = [];
+    if (result) {
+      if (Array.isArray(result[0])) {
+        rows = result[0];
+      } else if (Array.isArray(result)) {
+        rows = result;
+      }
+    }
+
+    // Si aucune entrée n'existe, on en crée une en initialisant last_request_reset à la date actuelle
+    if (!rows || rows.length === 0) {
+      const now = new Date();
+      await pool.execute(
+        `INSERT INTO user_model_quotas 
+         (user_id, model_name, request_count, max_requests, last_request_reset)
+         VALUES (?, ?, 0, 10, ?)`,
+        [decoded.userId, modelParam, now]
+      );
+      return NextResponse.json({
+        current: 0,
+        max: 10,
+        remaining: 10,
+      });
+    }
+
+    // Utiliser la première ligne retournée
+    const row = rows[0];
+    if (!row) {
+      // En cas de problème, renvoyer des valeurs par défaut
+      return NextResponse.json({
+        current: 0,
+        max: 10,
+        remaining: 10,
+      });
+    }
+
+    const currentCount = parseInt(row.request_count, 10) || 0;
+    const maxRequests = parseInt(row.max_requests, 10) || 10;
+
 
     return NextResponse.json({
-      current: userData.request_count,
-      max: userData.max_requests,
-      remaining: Math.max(0, userData.max_requests - userData.request_count)
+      current: currentCount,
+      max: maxRequests,
+      remaining: Math.max(0, maxRequests - currentCount),
     });
-
   } catch (error) {
     console.error('Erreur complète:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

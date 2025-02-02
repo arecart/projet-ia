@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ParticlesComponent from '@/components/ParticlesComponent';
-import GenerationForm from '@/components/GenerationForm';
-import AdminDashboard from '@/components/AdminDashboard';
+import ChatInterface from '@/components/Generation/ChatInterface';
+import AdminDashboard from '@/components/Dashboard/AdminDashboard';
 
 export default function HomePage() {
   const router = useRouter();
@@ -64,7 +64,7 @@ export default function HomePage() {
       {isAdmin ? (
         <AdminDashboard onLogout={handleLogout} />
       ) : (
-        <GenerationForm onLogout={handleLogout} />
+        <ChatInterface onLogout={handleLogout} />
       )}
     </div>
   );

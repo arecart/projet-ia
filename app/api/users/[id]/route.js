@@ -1,58 +1,136 @@
 import { NextResponse } from 'next/server';
 import pool from '@/app/db';
 
-export async function PUT(request, context) {
+export async function GET(request) {
+  // Récupération de l'id depuis l'URL
+  const id = request.url.split('/').pop();
+  let conn;
+  
   try {
-    const params = await context.params;
-    const id = params?.id;
-    const { username, role, newId, maxRequests } = await request.json();
+    conn = await pool.getConnection();
+    
+    // Sélection de l'utilisateur avec is_active
+    const users = await conn.query(`
+      SELECT id, username, role, login_count, last_login, created_at, is_active
+      FROM users 
+      WHERE id = ?
+    `, [id]);
 
-    const conn = await pool.getConnection();
-    await conn.execute(
-      'UPDATE users SET username = ?, role = ?, id = ?, max_requests = ? WHERE id = ?',
-      [username, role, newId || id, maxRequests, id]
-    );
-    conn.release();
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
-    return NextResponse.json(
-      { error: "Erreur lors de la mise à jour de l'utilisateur" },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * DELETE /api/users/[id]
- */
-export async function DELETE(request, context) {
-  try {
-    const params = await context.params;
-    const id = params?.id;
-
-    if (!id) {
+    if (!users || users.length === 0) {
       return NextResponse.json(
-        { error: 'ID de l\'utilisateur requis.' },
-        { status: 400 }
+        { error: "Utilisateur non trouvé" },
+        { status: 404 }
       );
     }
 
-    const conn = await pool.getConnection();
-    await conn.query('DELETE FROM users WHERE id = ?', [id]);
+    const userData = users[0];
+    console.log('User récupéré :', userData);
 
-    // Réorganiser les IDs après la suppression
-    await conn.query('SET @count = 0');
-    await conn.query('UPDATE users SET id = @count:= @count + 1 ORDER BY id');
-    await conn.query('ALTER TABLE users AUTO_INCREMENT = 1');
+    // Récupération des quotas
+    const quotas = await conn.query(`
+      SELECT 
+        model_name,
+        request_count,
+        max_requests,
+        last_request_reset
+      FROM user_model_quotas
+      WHERE user_id = ?
+    `, [id]);
 
-    conn.release();
-    return NextResponse.json({ success: true }, { status: 200 });
+    const quotasWithInfo = quotas.map(quota => {
+      const now = new Date();
+      const resetTime = quota.last_request_reset 
+        ? new Date(quota.last_request_reset)
+        : new Date(0);
+      
+      const timeUntilReset = Math.max(0, 3 * 60 * 60 * 1000 - (now - resetTime));
+      
+      return {
+        ...quota,
+        remaining: Math.max(0, quota.max_requests - quota.request_count),
+        resetIn: timeUntilReset,
+        resetInHours: Math.ceil(timeUntilReset / (60 * 60 * 1000))
+      };
+    });
+
+    return NextResponse.json({
+      ...userData,
+      quotas: quotasWithInfo
+    });
+
   } catch (error) {
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+    console.error('Erreur:', error);
     return NextResponse.json(
-      { error: 'Erreur interne du serveur.' },
+      { error: "Erreur lors de la récupération de l'utilisateur" },
       { status: 500 }
     );
+  } finally {
+    if (conn) await conn.release();
+  }
+}
+
+export async function PUT(request) {
+  const id = request.url.split('/').pop();
+  let conn;
+
+  try {
+    // On attend un JSON contenant username, role, quotas et is_active
+    const { username, role, quotas, is_active } = await request.json();
+    
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    await conn.query(
+      'UPDATE users SET username = ?, role = ?, is_active = ? WHERE id = ?',
+      [username, role, is_active, id]
+    );
+
+    if (quotas && quotas.length > 0) {
+      await conn.query('DELETE FROM user_model_quotas WHERE user_id = ?', [id]);
+
+      for (const quota of quotas) {
+        await conn.query(
+          'INSERT INTO user_model_quotas (user_id, model_name, max_requests) VALUES (?, ?, ?)',
+          [id, quota.model_name, quota.max_requests]
+        );
+      }
+    }
+
+    await conn.commit();
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error('Erreur:', error);
+    return NextResponse.json(
+      { error: "Erreur lors de la mise à jour" },
+      { status: 500 }
+    );
+  } finally {
+    if (conn) await conn.release();
+  }
+}
+
+export async function DELETE(request) {
+  const id = request.url.split('/').pop();
+  let conn;
+  
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    await conn.query('DELETE FROM users WHERE id = ?', [id]);
+
+    await conn.commit();
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error('Erreur:', error);
+    return NextResponse.json(
+      { error: "Erreur lors de la suppression" },
+      { status: 500 }
+    );
+  } finally {
+    if (conn) await conn.release();
   }
 }

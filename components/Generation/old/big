@@ -1,0 +1,270 @@
+// components/GenerationResult.jsx
+export default function GenerationResult({ result, selectedProvider, selectedModel, onCopy, copySuccess }) {
+  const CopyIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+    </svg>
+  );
+  
+  const CheckIcon = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+  
+  return (
+    <div className="mt-6 glass-morphism p-4 rounded-xl animate__animated animate__fadeInUp">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">📜</span>
+          <span className="font-semibold">Résultat</span>
+          <span className="text-sm text-gray-300 ml-2">
+            {selectedProvider === 'gpt'
+              ? 'GPT-3.5 Turbo'
+              : selectedModel.replace(/-latest/g, '')}
+          </span>
+        </div>
+        <button
+          onClick={onCopy}
+          className={`copy-button flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 ${
+            copySuccess
+              ? 'bg-green-500/20 text-green-300'
+              : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-200'
+          }`}
+        >
+          {copySuccess ? <CheckIcon /> : <CopyIcon />}
+          <span className="text-sm">
+            {copySuccess ? 'Copié !' : 'Copier'}
+          </span>
+        </button>
+      </div>
+      <p className="break-words whitespace-pre-wrap text-gray-100">
+        {result.text}
+      </p>
+    </div>
+  );
+}
+
+
+
+// components/PromptInput.jsx
+export default function PromptInput({ prompt, charCount, onChange, onClear }) {
+    return (
+      <div className="mb-6">
+        <label className="block font-semibold text-lg mb-3">Prompt :</label>
+        <textarea
+          value={prompt}
+          onChange={onChange}
+          className="w-full p-4 border rounded-xl bg-gray-800/80 text-white input-focus placeholder-gray-400 min-h-[150px] transition-all duration-300 custom-scrollbar"
+          placeholder="Décrivez votre requête..."
+          maxLength="1000"
+        ></textarea>
+        <div className="text-sm text-gray-400 mt-2 flex justify-between">
+          <span>{charCount} / 1000</span>
+          <button 
+            onClick={onClear} 
+            className="hover:text-white transition-colors duration-300"
+          >
+            Effacer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  
+
+
+  // components/ProviderSelector.jsx
+export default function ProviderSelector({ selectedProvider, selectedModel, onProviderChange, onModelChange }) {
+    return (
+      <div className="mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <button
+            onClick={() => onProviderChange('gpt')}
+            className={`provider-btn ${selectedProvider === 'gpt'
+              ? 'modern-button'
+              : 'bg-gray-700 hover:bg-gray-600'} p-3 rounded-xl transition-all`}
+          >
+            🤖 OpenAI
+            <span className="model-badge ml-2">GPT-3.5 Turbo</span>
+          </button>
+          <button
+            onClick={() => onProviderChange('mistral')}
+            className={`provider-btn ${selectedProvider === 'mistral'
+              ? 'modern-button'
+              : 'bg-gray-700 hover:bg-gray-600'} p-3 rounded-xl transition-all`}
+          >
+            🚀 Mistral
+            <span className="model-badge ml-2">
+              {selectedModel === 'mistral-small-latest' ? 'Small 24.09' : 'Codestral'}
+            </span>
+          </button>
+        </div>
+    
+        {selectedProvider === 'mistral' && (
+          <div className="mb-4">
+            <select
+              value={selectedModel}
+              onChange={(e) => onModelChange(e.target.value)}
+              className="w-full p-3 border rounded-xl bg-gray-800/80 text-white"
+            >
+              <option value="mistral-small-latest">Mistral Small 24.09</option>
+              <option value="codestral-latest">Codestral</option>
+            </select>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  
+
+  // components/PromptInput.jsx
+export default function PromptInput({ prompt, charCount, onChange, onClear }) {
+    return (
+      <div className="mb-6">
+        <label className="block font-semibold text-lg mb-3">Prompt :</label>
+        <textarea
+          value={prompt}
+          onChange={onChange}
+          className="w-full p-4 border rounded-xl bg-gray-800/80 text-white input-focus placeholder-gray-400 min-h-[150px] transition-all duration-300 custom-scrollbar"
+          placeholder="Décrivez votre requête..."
+          maxLength="1000"
+        ></textarea>
+        <div className="text-sm text-gray-400 mt-2 flex justify-between">
+          <span>{charCount} / 1000</span>
+          <button 
+            onClick={onClear} 
+            className="hover:text-white transition-colors duration-300"
+          >
+            Effacer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  
+  // components/QuotaDisplay.jsx
+export default function QuotaDisplay({ quotaInfo }) {
+    const { remaining, max, current } = quotaInfo;
+    
+    return (
+      <div className="mb-4 p-4 rounded-xl bg-gray-800/50">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-300">Quota disponible :</span>
+          <span className="text-sm font-medium">
+            {remaining} / {max} requêtes
+          </span>
+        </div>
+        <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
+          <div
+            className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${(current / max) * 100}%`,
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  
+
+
+  // hooks/useGeneration.js
+import { useState } from 'react';
+
+export const useGeneration = (setQuotaInfo) => {
+  const [formState, setFormState] = useState({ error: null, result: null });
+  const [loading, setLoading] = useState(false);
+
+  const generateText = async (prompt, selectedProvider, selectedModel) => {
+    if (!prompt.trim()) return;
+    
+    try {
+      setLoading(true);
+      
+      // Décrémente le quota
+      const quotaResponse = await fetch('/api/quota/decrement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ model: selectedModel }),
+        credentials: 'include'
+      });
+
+      if (!quotaResponse.ok) {
+        const errorData = await quotaResponse.json();
+        if (quotaResponse.status === 403) {
+          alert("Votre quota de générations est épuisé");
+          return;
+        }
+        throw new Error(errorData.error || 'Erreur de quota');
+      }
+
+      setQuotaInfo(await quotaResponse.json());
+
+      // Lancement de la génération
+      const generationResponse = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          provider: selectedProvider, 
+          model: selectedModel, 
+          prompt 
+        }),
+        credentials: 'include'
+      });
+
+      if (!generationResponse.ok) throw new Error('Erreur lors de la génération');
+
+      const result = await generationResponse.json();
+      setFormState({ error: null, result });
+    } catch (error) {
+      console.error('Erreur:', error);
+      setFormState({ error: error.message, result: null });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { formState, loading, generateText };
+};
+
+
+
+// hooks/useQuota.js
+import { useState, useEffect } from 'react';
+
+export const useQuota = (selectedProvider) => {
+  const [quotaInfo, setQuotaInfo] = useState({
+    current: 0,
+    max: 0,
+    remaining: 0,
+  });
+
+  const refreshQuota = async () => {
+    try {
+      // On passe le provider en query paramètre
+      const response = await fetch(`/api/quota?provider=${selectedProvider}`);
+      if (!response.ok) throw new Error('Erreur lors de la récupération du quota');
+      const data = await response.json();
+      setQuotaInfo(data);
+    } catch (error) {
+      console.error('Erreur de quota:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProvider) {
+      refreshQuota();
+      const interval = setInterval(refreshQuota, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedProvider]);
+
+  return { quotaInfo, setQuotaInfo, refreshQuota };
+};

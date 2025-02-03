@@ -15,7 +15,6 @@ export async function DELETE(request) {
 
     return NextResponse.json({ message: 'Utilisateurs supprimés avec succès' });
   } catch (error) {
-    console.error('Erreur lors de la suppression des utilisateurs:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la suppression des utilisateurs' },
       { status: 500 }

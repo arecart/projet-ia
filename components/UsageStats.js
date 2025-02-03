@@ -30,7 +30,13 @@ const modelRates = {
     output: 1.50,
     label: 'GPT-3.5-Turbo (0125)',
   },
+  'o3-mini-2025-01-31': {
+    input: 1.10,
+    output: 4.40,
+    label: 'O3 Mini',
+  }
 };
+
 
 // Fonction pour formater un float en string (ex. 0.18 => "0,18")
 const formatFloat = (num) => {
@@ -62,7 +68,6 @@ export default function UsageStatsAvecTarifsEtGlobal({ onClose }) {
         const data = await res.json();
         setUsageData(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Erreur chargement usage:', err);
         setError(err.message);
       }
     };
@@ -356,7 +361,6 @@ export default function UsageStatsAvecTarifsEtGlobal({ onClose }) {
 
         {/* Section supplémentaire : Statistiques Sessions/Messages par Utilisateur */}
         <SessionMessageStats usageData={usageData} />
-
       </div>
     </div>
   );
@@ -384,7 +388,6 @@ function AffichageTable({ grouped, columnKey, typeValeur, groupBy, calcTotal, gl
                 <table className="min-w-full border border-gray-700">
                   <thead>
                     <tr className="border-b border-gray-700 bg-gray-800/50">
-                      <th className="p-2 text-left text-gray-200">ID</th>
                       <th className="p-2 text-left text-gray-200">Utilisateur</th>
                       <th className="p-2 text-left text-gray-200">Modèle</th>
                       <th className="p-2 text-left text-gray-200">{getEnteteColonne()}</th>
@@ -401,7 +404,6 @@ function AffichageTable({ grouped, columnKey, typeValeur, groupBy, calcTotal, gl
                       }
                       return (
                         <tr key={`${u.user_id}|${u.model_name}`} className="border-b border-gray-700 hover:bg-gray-700/50">
-                          <td className="p-2 text-gray-300">{u.user_id}</td>
                           <td className="p-2 text-gray-300">{u.username}</td>
                           <td className="p-2 text-gray-300">{u.model_name}</td>
                           <td className="p-2 text-gray-300">{valAffiche}</td>
@@ -410,7 +412,7 @@ function AffichageTable({ grouped, columnKey, typeValeur, groupBy, calcTotal, gl
                     })}
                     {/* Ligne Totaux du groupe */}
                     <tr className="border-t border-gray-600 bg-gray-800/50 font-bold text-gray-100">
-                      <td className="p-2" colSpan={3}>
+                      <td className="p-2" colSpan={2}>
                         Total pour {gVal}
                       </td>
                       <td className="p-2">

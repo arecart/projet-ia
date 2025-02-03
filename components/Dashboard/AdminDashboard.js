@@ -1,5 +1,5 @@
+// components/Dashboard/AdminDashboard.js
 'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { FaUserPlus, FaComments } from 'react-icons/fa';
 import UsersTable from './UsersTable';
@@ -8,16 +8,28 @@ import QuotaModal from './QuotaModal';
 import UsageStats from '../UsageStats';
 import ChatInterface from '../Generation/ChatInterface';
 
+function Toast({ message, type }) {
+  return (
+    <div
+      className={`fixed bottom-4 right-4 z-50 px-4 py-2 rounded shadow-lg text-white
+        ${type === 'success' ? 'bg-green-600' : 'bg-red-600'} animate-fadeInOut`}
+    >
+      {message}
+    </div>
+  );
+}
+
 export default function AdminDashboard({ onLogout }) {
   const [users, setUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
-  // Nous n'utilisons plus currentUser ici puisque /api/me n'est pas disponible.
   const [editingUser, setEditingUser] = useState(null);
   const [showUserInterface, setShowUserInterface] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [quotaModalUser, setQuotaModalUser] = useState(null);
   const [lastSelectedUser, setLastSelectedUser] = useState(null);
+  const [toast, setToast] = useState(null); // { message, type }
+  const [loading, setLoading] = useState(false);
   const usersRef = useRef([]);
 
   const fetchUsers = async () => {
@@ -29,7 +41,6 @@ export default function AdminDashboard({ onLogout }) {
       setUsers(usersArray);
       usersRef.current = usersArray;
     } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
       setUsers([]);
     }
   };
@@ -78,7 +89,6 @@ export default function AdminDashboard({ onLogout }) {
       await fetchUsers();
       setSelectedUsers([]);
     } catch (error) {
-      console.error('Erreur lors de la suppression multiple:', error);
     }
   };
 
@@ -88,42 +98,51 @@ export default function AdminDashboard({ onLogout }) {
       if (!res.ok) throw new Error('Erreur suppression utilisateur');
       await fetchUsers();
     } catch (error) {
-      console.error('Erreur suppression utilisateur:', error);
     }
   };
 
   const startEditing = (user) => {
-    setEditingUser({ ...user, originalId: user.id });
+    setEditingUser({ ...user });
   };
+
+  // Fonction onUpdateUser qui met à jour l'utilisateur (sans modification d'ID)
+  async function onUpdateUser() {
+    if (!editingUser) {
+      return;
+    }
+    const response = await fetch(`/api/users/${editingUser.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: editingUser.username,
+        role: editingUser.role,
+        quotas: editingUser.quotas,
+        is_active: editingUser.is_active,
+      }),
+    });
+    return response;
+  }
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
+    setLoading(true);
     try {
-      const res = await fetch(`/api/users/${editingUser.originalId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: editingUser.username,
-          role: editingUser.role,
-          quotas: editingUser.quotas,
-          newId: editingUser.id !== editingUser.originalId ? parseInt(editingUser.id, 10) : undefined,
-          is_active: editingUser.is_active,
-        }),
-      });
-      if (!res.ok) throw new Error('Erreur lors de la mise à jour de l’utilisateur');
-      // Si l'admin modifie ses propres informations et perd le rôle "admin", on le déconnecte
-      const updatedRes = await fetch(`/api/users/${editingUser.originalId}`);
-      if (!updatedRes.ok) throw new Error('Erreur lors de la récupération de l’utilisateur mis à jour');
-      const updatedUser = await updatedRes.json();
-      if (updatedUser.role !== "admin") {
-        console.error('Rôle modifié côté serveur, déconnexion forcée');
-        onLogout();
-        return;
+      const res = await onUpdateUser();
+      if (!res) {
+        throw new Error("Aucune réponse reçue de la requête PUT");
       }
-      setEditingUser(null);
-      await fetchUsers();
+      const data = await res.json();
+      if (data.success) {
+        setEditingUser(null);
+        showToast("Utilisateur mis à jour avec succès !", "success");
+        await fetchUsers();
+      } else {
+        throw new Error("Erreur de mise à jour");
+      }
     } catch (error) {
-      console.error('Erreur de mise à jour:', error);
+      showToast("Erreur lors de la mise à jour de l’utilisateur.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -149,9 +168,19 @@ export default function AdminDashboard({ onLogout }) {
       if (!res.ok) throw new Error('Erreur lors de la mise à jour des quotas');
       setQuotaModalUser(null);
       await fetchUsers();
+      showToast("Quota mis à jour avec succès !", "success");
     } catch (error) {
       console.error('Erreur de mise à jour quotas:', error);
+      showToast("Erreur lors de la mise à jour du quota.", "error");
     }
+  };
+
+  // Fonction pour afficher un toast pendant 5 secondes
+  const showToast = (message, type) => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 5000);
   };
 
   return (
@@ -208,6 +237,7 @@ export default function AdminDashboard({ onLogout }) {
               onUpdateUser={handleUpdateUser}
               onDeleteUser={handleDeleteUser}
               onOpenQuotaModal={handleOpenQuotaModal}
+              onShowToast={showToast}
             />
           </main>
           <footer className="mt-12 text-center text-gray-400 text-sm pb-4">
@@ -218,7 +248,11 @@ export default function AdminDashboard({ onLogout }) {
         </div>
       )}
       {showAddUserModal && (
-        <AddUserModal onClose={() => setShowAddUserModal(false)} refreshUsers={fetchUsers} />
+        <AddUserModal
+          onClose={() => setShowAddUserModal(false)}
+          refreshUsers={fetchUsers}
+          onShowToast={showToast}
+        />
       )}
       {quotaModalUser && (
         <QuotaModal
@@ -226,8 +260,32 @@ export default function AdminDashboard({ onLogout }) {
           onClose={() => setQuotaModalUser(null)}
           onSaveQuotas={handleSaveQuotas}
           setQuotaModalUser={setQuotaModalUser}
+          onShowToast={showToast}
         />
       )}
+      {toast && <Toast message={toast.message} type={toast.type} />}
+      <style jsx>{`
+        @keyframes fadeInOut {
+          0% {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          20% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          80% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+        }
+        .animate-fadeInOut {
+          animation: fadeInOut 5s ease-in-out forwards;
+        }
+      `}</style>
     </>
   );
 }

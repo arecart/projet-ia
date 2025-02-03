@@ -9,6 +9,13 @@ CREATE TABLE users (
   is_active BOOLEAN DEFAULT TRUE
 );
 
+debug :
+UPDATE users
+SET is_active = 1
+WHERE username = 'admin';
+
+UPDATE users
+SET is_active = 1;
 
 
 CREATE TABLE token_usage (

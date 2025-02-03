@@ -39,7 +39,6 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Erreur reset manuel:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

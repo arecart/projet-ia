@@ -16,7 +16,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
     const skip = Number(searchParams.get('skip')) || 0;
-    const take = Number(searchParams.get('take')) || 50;
+    const take = Number(searchParams.get('take')) || 20;
 
     if (!sessionId) {
       return new Response(
@@ -25,16 +25,23 @@ export async function GET(request) {
       );
     }
 
+    // Récupération des messages, triés par timestamp ASC
     const messages = await pool.query(
-      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp ASC LIMIT ?, ?',
-      [sessionId, skip, take]
+      `SELECT * FROM (
+        SELECT * FROM ChatMessage 
+        WHERE session_id = ? 
+        ORDER BY timestamp DESC 
+        LIMIT ?
+      ) AS subquery 
+      ORDER BY timestamp ASC`,
+      [sessionId, take]
     );
+    
     return new Response(
       JSON.stringify({ messages }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Erreur lors de la récupération des messages:', error);
     return new Response(
       JSON.stringify({ error: 'Erreur serveur lors de la récupération des messages.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -75,7 +82,6 @@ export async function POST(request) {
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Erreur lors de l’ajout du message:', error);
     return new Response(
       JSON.stringify({ error: 'Erreur serveur lors de l’ajout du message.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

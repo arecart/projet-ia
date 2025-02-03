@@ -18,7 +18,7 @@ async function trackUsage(tokenCookie, userId, modelName, promptTokens, completi
       },
       body: JSON.stringify({
         userId,
-        modelName,         // On envoie "gpt-3.5-turbo-0125"
+        modelName, // On envoie "gpt-3.5-turbo-0125"
         promptTokens,
         completionTokens,
         totalTokens,
@@ -26,13 +26,11 @@ async function trackUsage(tokenCookie, userId, modelName, promptTokens, completi
     });
 
     if (!response.ok) {
-      console.error('Track usage failed:', response.status);
       return null;
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Track usage error:', error.message);
     return null;
   }
 }
@@ -65,7 +63,7 @@ export async function handleGPTGeneration(request, data) {
       );
     }
 
-    // Récupérer le prompt depuis le body
+    // Récupérer le prompt depuis les données passées
     const { prompt } = data;
     if (!prompt) {
       return NextResponse.json(
@@ -74,16 +72,16 @@ export async function handleGPTGeneration(request, data) {
       );
     }
 
-    // Définir le modèle (ici GPT 3.5)
+    // Définir le modèle (ici GPT-3.5 Turbo)
     const modelName = "gpt-3.5-turbo-0125";
 
-    // Appel à OpenAI
+    // Appel à OpenAI pour générer la réponse
     const completion = await openai.chat.completions.create({
       model: modelName,
       messages: [{ role: "user", content: prompt }],
     });
 
-    // S'il y a usage, on piste
+    // Pister l'usage si OpenAI retourne des informations d'usage
     if (completion.usage) {
       await trackUsage(
         tokenCookie,
@@ -95,13 +93,13 @@ export async function handleGPTGeneration(request, data) {
       );
     }
 
+    // Retourner le résultat de la génération
     return NextResponse.json({
       text: completion.choices[0].message.content,
       usage: completion.usage,
     });
 
   } catch (error) {
-    console.error('OpenAI error:', error.message);
     return NextResponse.json(
       { error: 'Failed to generate response' },
       { status: 500 }
@@ -109,4 +107,5 @@ export async function handleGPTGeneration(request, data) {
   }
 }
 
+// Exporte la fonction de génération en tant que méthode POST
 export { handleGPTGeneration as POST };

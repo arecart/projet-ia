@@ -5,7 +5,14 @@ export const useGeneration = (setQuotaInfo) => {
   const [formState, setFormState] = useState({ error: null, result: null });
   const [loading, setLoading] = useState(false);
 
-  const generateText = async (prompt, selectedProvider, selectedModel) => {
+  /**
+   * Génère du texte en décrémentant d'abord le quota, puis en envoyant la requête de génération.
+   * @param {string} prompt Le prompt à envoyer.
+   * @param {string} selectedProvider Le provider sélectionné (par ex. 'gpt' ou 'mistral').
+   * @param {string} selectedModel Le modèle sélectionné.
+   * @param {string} context Le contexte (ex : l'historique des 20 derniers messages) à inclure dans la requête.
+   */
+  const generateText = async (prompt, selectedProvider, selectedModel, context = "") => {
     if (!prompt.trim()) return;
     
     try {
@@ -30,16 +37,19 @@ export const useGeneration = (setQuotaInfo) => {
         throw new Error(errorData.error || 'Erreur de quota');
       }
 
-      setQuotaInfo(await quotaResponse.json());
+      // Met à jour le quota avec la réponse de l'API
+      const quotaData = await quotaResponse.json();
+      setQuotaInfo(quotaData);
 
-      // Lancement de la génération
+      // Lancement de la génération en incluant le contexte
       const generationResponse = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           provider: selectedProvider, 
           model: selectedModel, 
-          prompt 
+          prompt,
+          context,  // Contexte pour permettre à l'IA de se rappeler de l'historique
         }),
         credentials: 'include'
       });
@@ -49,7 +59,6 @@ export const useGeneration = (setQuotaInfo) => {
       const result = await generationResponse.json();
       setFormState({ error: null, result });
     } catch (error) {
-      console.error('Erreur:', error);
       setFormState({ error: error.message, result: null });
     } finally {
       setLoading(false);
@@ -58,3 +67,5 @@ export const useGeneration = (setQuotaInfo) => {
 
   return { formState, loading, generateText };
 };
+
+export default useGeneration;

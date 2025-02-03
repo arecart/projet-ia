@@ -3,26 +3,35 @@ import pool from '@/app/db';
 import { NextResponse } from 'next/server';
 import { verify } from '@/utils/jwt';
 
+// Fonction helper pour normaliser le nom du modèle
+function normalizeModelName(modelName) {
+  switch (modelName) {
+    case 'gpt':
+      return 'gpt-3.5-turbo';
+    case 'mistral':
+      return 'mistral-small-latest';
+    case 'o3':
+      return 'o3-mini-2025-01-31';
+    default:
+      return modelName;
+  }
+}
+
 export async function POST(request) {
   try {
     // Vérification du token
     const token = request.cookies.get('token')?.value;
     if (!token) {
-      console.log('Pas de token trouvé');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const decoded = await verify(token);
     if (!decoded) {
-      console.log('Token invalide');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    console.log('User décodé:', decoded);
-
     // Récupération du body
     const rawBody = await request.text();
-    console.log('Raw Request Body:', rawBody);
 
     if (!rawBody) {
       return NextResponse.json({ error: 'Corps de la requête vide' }, { status: 400 });
@@ -39,8 +48,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Corps de la requête invalide' }, { status: 400 });
     }
 
-    const modelName = body.model || 'gpt-3.5-turbo';
-    console.log('Model Name:', modelName);
+    const modelName = normalizeModelName(body.model || 'gpt-3.5-turbo');
 
     // Vérification de l'existence d'une entrée
     const [rows] = await pool.execute(
@@ -48,14 +56,8 @@ export async function POST(request) {
       [decoded.userId, modelName]
     );
 
-    console.log('Résultat brut de la DB:', rows);
-    console.log('Type de rows:', typeof rows);
-    console.log('Est-ce un tableau ?', Array.isArray(rows));
-    console.log('Contenu rows:', rows);
-
     // Si pas d'entrée, on en crée une
     if (!rows || (Array.isArray(rows) && rows.length === 0)) {
-      console.log('Création d\'une nouvelle entrée de quota');
       await pool.execute(
         `INSERT INTO user_model_quotas
         (user_id, model_name, request_count, max_requests)
@@ -72,18 +74,13 @@ export async function POST(request) {
 
     // Récupération des données de quota
     const quota = Array.isArray(rows) ? rows[0] : rows;
-    console.log('Type de quota:', typeof quota);
-    console.log('Contenu quota:', quota);
 
     if (quota) {
-      console.log('request_count:', quota.request_count);
-      console.log('max_requests:', quota.max_requests);
     }
 
     // Conversion explicite des valeurs en nombres avec vérification
     const currentCount = Number(quota?.request_count ?? 0);
     const maxRequests = Number(quota?.max_requests ?? 10);
-    console.log('Quota actuel:', currentCount, 'Max:', maxRequests);
 
     // Vérification du dépassement de quota
     if (currentCount >= maxRequests) {
@@ -114,7 +111,6 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Erreur décrémentation:', error);
     return NextResponse.json({
       error: 'Erreur serveur',
       details: error.message
@@ -135,7 +131,6 @@ export async function PUT(request) {
     }
 
     const rawBody = await request.text();
-    console.log('Raw Request Body for reset:', rawBody);
 
     if (!rawBody) {
       return NextResponse.json({ error: 'Corps de la requête vide' }, { status: 400 });
@@ -148,7 +143,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Corps de la requête invalide' }, { status: 400 });
     }
 
-    const modelName = body.model || 'gpt-3.5-turbo';
+    const modelName = normalizeModelName(body.model || 'gpt-3.5-turbo');
 
     // Réinitialisation du quota
     await pool.execute(
@@ -166,7 +161,6 @@ export async function PUT(request) {
     });
 
   } catch (error) {
-    console.error('Erreur réinitialisation:', error);
     return NextResponse.json({
       error: 'Erreur serveur',
       details: error.message

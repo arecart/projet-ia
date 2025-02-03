@@ -8,7 +8,6 @@ export const config = {
 };
 
 export async function middleware(request) {
-  console.log('Middleware executing for:', request.url);
   const token = request.cookies.get('token')?.value;
   const isLoginPage = request.nextUrl.pathname === '/login';
 

@@ -102,7 +102,6 @@ export async function POST(request) {
     if (conn) {
       await conn.rollback();
     }
-    console.error('❌ Erreur lors de la création de l\'utilisateur:', error);
     return NextResponse.json(
       { error: 'Erreur interne du serveur.' },
       { status: 500 }

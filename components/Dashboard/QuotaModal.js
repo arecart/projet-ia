@@ -2,9 +2,7 @@
 'use client';
 import React from 'react';
 
-export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalUser }) {
-  // user est une copie de l’utilisateur, contenant user.quotas
-
+export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalUser, onShowToast }) {
   const handleChange = (index, value) => {
     const updatedQuotas = [...user.quotas];
     updatedQuotas[index].max_requests = parseInt(value, 10) || 0;
@@ -13,7 +11,6 @@ export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalU
 
   const handleSave = async () => {
     try {
-      // Appel de l'endpoint PUT pour mettre à jour uniquement max_requests
       const response = await fetch('/api/quota/update', {
         method: 'PUT',
         headers: {
@@ -23,14 +20,13 @@ export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalU
       });
       const data = await response.json();
       if (data.success) {
-        alert("Quota mis à jour avec succès !");
-        onSaveQuotas(); // Rafraîchit les données de l'utilisateur
+        onShowToast("Quota mis à jour avec succès !", "success");
+        onSaveQuotas();
       } else {
-        alert("Erreur lors de la mise à jour du quota.");
+        onShowToast("Erreur lors de la mise à jour du quota.", "error");
       }
     } catch (error) {
-      console.error(error);
-      alert("Erreur serveur lors de la mise à jour.");
+      onShowToast("Erreur serveur lors de la mise à jour.", "error");
     }
   };
 
@@ -41,14 +37,13 @@ export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalU
       });
       const data = await response.json();
       if (data.success) {
-        alert("Quota réinitialisé avec succès !");
-        onSaveQuotas(); 
+        onShowToast("Quota réinitialisé avec succès !", "success");
+        onSaveQuotas();
       } else {
-        alert("Erreur lors de la réinitialisation du quota.");
+        onShowToast("Erreur lors de la réinitialisation du quota.", "error");
       }
     } catch (err) {
-      console.error(err);
-      alert("Erreur serveur lors de la réinitialisation.");
+      onShowToast("Erreur serveur lors de la réinitialisation.", "error");
     }
   };
 

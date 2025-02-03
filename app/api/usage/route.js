@@ -251,7 +251,6 @@ export async function GET(request) {
     return NextResponse.json(usageArray);
 
   } catch (err) {
-    console.error('Usage error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

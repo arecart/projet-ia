@@ -33,7 +33,7 @@ export async function POST(request) {
     // Récupérer le corps JSON
     const { 
       userId,
-      modelName,         // <--- On attend le nom du modèle (ex: "gpt-3.5-turbo-0125")
+      modelName,
       promptTokens,
       completionTokens,
       totalTokens
@@ -56,35 +56,34 @@ export async function POST(request) {
     }
 
     // Calcul des tarifs suivant le modèle
-    // (coût par token = euro / 1e6 tokens)
     let promptRate = 0;
     let completionRate = 0;
 
     switch (modelName) {
       case 'gpt-3.5-turbo-0125':
       case 'gpt-3.5-turbo': 
-        // Exemple de tarifs (GPT-3.5)
-        // 0.5e-6 par prompt token, 1.5e-6 par completion token
         promptRate = 0.0000005;
         completionRate = 0.0000015;
         break;
 
       case 'mistral-small-latest':
-        // Mistral Small -> 0,18€ / million = 0.00000018
-        // Completion -> 0,54€ / million = 0.00000054
         promptRate = 0.00000018;
         completionRate = 0.00000054;
         break;
 
       case 'codestral-latest':
-        // Codestral -> 0,30€ / million = 0.00000030
-        // Completion -> 0,90€ / million = 0.00000090
         promptRate = 0.00000030;
         completionRate = 0.00000090;
         break;
 
+      case 'o3-mini-2025-01-31':
+        // O3 Mini -> 0,20€ / million = 0.00000020
+        // Completion -> 0,60€ / million = 0.00000060
+        promptRate = 0.00000020;
+        completionRate = 0.00000060;
+        break;
+
       default:
-        // Par défaut, on peut mettre un tarif ou renvoyer une erreur
         return NextResponse.json(
           { error: `Unknown modelName: ${modelName}` },
           { status: 400 }
@@ -107,7 +106,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Track usage error:', error.message);
     return NextResponse.json(
       { error: 'Internal server error' }, 
       { status: 500 }

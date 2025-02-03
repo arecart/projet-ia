@@ -1,6 +1,6 @@
 // components/MainContent.jsx
 import React from 'react';
-import ProviderSelector from '../ProviderSelector';
+import ProviderSelector from '../AISelector';
 import QuotaDisplay from './QuotaDisplay';
 import PromptInput from './PromptInput';
 import GenerationResult from './GenerationResult';

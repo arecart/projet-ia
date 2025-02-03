@@ -35,7 +35,6 @@ export async function GET(request) {
       userId: decoded.userId  // Ajout de l'userId ici
     });
   } catch (error) {
-    console.error('/api/role =>', error);
     return NextResponse.json({ error: 'Erreur interne du serveur' }, { status: 500 });
   }
 }

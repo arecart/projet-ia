@@ -52,11 +52,9 @@ export async function GET() {
       };
     }));
 
-    console.log('RESULT GET /api/users =>', usersWithQuotas);
 
     return NextResponse.json(usersWithQuotas);
   } catch (err) {
-    console.error('Erreur lors de la récupération des utilisateurs:', err);
     return NextResponse.json(
       { error: 'Erreur lors de la récupération des utilisateurs' },
       { status: 500 }
@@ -86,7 +84,8 @@ export async function POST(request) {
     // Insérer les quotas pour chaque modèle
     const defaultQuotas = [
       { model_name: 'gpt-3.5-turbo', max_requests: 10 },
-      { model_name: 'mistral-small-latest', max_requests: 10 }
+      { model_name: 'mistral-small-latest', max_requests: 10 },
+      { model_name: 'o3-mini-2025-01-31', max_requests: 10 }
     ];
 
     const quotasToInsert = quotas || defaultQuotas;
@@ -121,7 +120,6 @@ export async function POST(request) {
     if (conn) {
       await conn.rollback();
     }
-    console.error('Erreur lors de la création de l\'utilisateur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création de l\'utilisateur' },
       { status: 500 }
@@ -154,7 +152,6 @@ export async function DELETE(request) {
     if (conn) {
       await conn.rollback();
     }
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     return NextResponse.json(
       { error: 'Erreur lors de la suppression de l\'utilisateur' },
       { status: 500 }

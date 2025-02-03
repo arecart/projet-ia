@@ -9,19 +9,17 @@ export async function POST(request) {
     
     if (!username || !password) {
       return NextResponse.json(
-        { error: 'Nom d\'utilisateur et mot de passe requis.' },
+        { error: "Nom d'utilisateur et mot de passe requis." },
         { status: 400 }
       );
     }
 
     const conn = await pool.getConnection();
 
-    // Attention, mariadb peut renvoyer un seul objet ou un tableau
     const res = await conn.query(
       'SELECT * FROM users WHERE username = ?',
       [username]
     );
-    // On force la conversion
     const rows = Array.isArray(res) ? res : [res];
 
     if (!rows || rows.length === 0) {
@@ -32,10 +30,8 @@ export async function POST(request) {
       );
     }
 
-    const user = rows[0]; // Ok, user existe
-    console.log('User trouvé =>', user);
+    const user = rows[0];
 
-    // Vérification du mot de passe
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       conn.release();
@@ -45,22 +41,29 @@ export async function POST(request) {
       );
     }
 
-    // Mettre à jour login_count et last_login
-    await conn.query(`
-      UPDATE users
-      SET login_count = login_count + 1,
-          last_login = NOW()
-      WHERE id = ?
-    `, [user.id]);
+    // Vérification si le compte est activé
+   /* if (!user.is_active) {
+      conn.release();
+      return NextResponse.json(
+        { error: 'Votre compte est désactivé' },
+        { status: 403 }
+      );
+    }*/
 
-    // Générer un token (si besoin)
+    await conn.query(
+      `UPDATE users
+       SET login_count = login_count + 1,
+           last_login = NOW()
+       WHERE id = ?`,
+      [user.id]
+    );
+
     const token = await sign({
       userId: user.id,
       username: user.username,
       role: user.role,
     });
 
-    // Construire la réponse
     const response = NextResponse.json(
       {
         success: true,
@@ -69,7 +72,6 @@ export async function POST(request) {
       { status: 200 }
     );
 
-    // Mettre le cookie
     response.cookies.set({
       name: 'token',
       value: token,
@@ -82,9 +84,7 @@ export async function POST(request) {
 
     conn.release();
     return response;
-
   } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
     return NextResponse.json(
       { error: 'Erreur interne du serveur.' },
       { status: 500 }

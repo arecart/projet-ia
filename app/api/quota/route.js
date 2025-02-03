@@ -9,7 +9,6 @@ async function verifyAuth(request) {
   try {
     return await verify(token);
   } catch (err) {
-    console.error('Token verification error:', err);
     return null;
   }
 }
@@ -31,6 +30,8 @@ export async function GET(request) {
       modelParam = 'gpt-3.5-turbo';
     } else if (modelParam === 'mistral') {
       modelParam = 'mistral-small-latest';
+    } else if (modelParam === 'o3') {
+      modelParam = 'o3-mini-2025-01-31';
     }
 
     // Exécution de la requête SQL
@@ -81,14 +82,12 @@ export async function GET(request) {
     const currentCount = parseInt(row.request_count, 10) || 0;
     const maxRequests = parseInt(row.max_requests, 10) || 10;
 
-
     return NextResponse.json({
       current: currentCount,
       max: maxRequests,
       remaining: Math.max(0, maxRequests - currentCount),
     });
   } catch (error) {
-    console.error('Erreur complète:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

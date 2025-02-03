@@ -12,15 +12,12 @@ import { handleGPTGeneration } from './gpt/route';
 async function getUserFromRequest(request) {
   const token = request.cookies.get('token')?.value;
   if (!token) {
-    console.debug('DEBUG - Aucun token trouvé dans la requête');
     return null;
   }
   try {
     const decoded = await verify(token);
-    console.debug('DEBUG - Token décodé:', decoded);
     return decoded;
   } catch (error) {
-    console.error('DEBUG - Erreur lors du décodage du token:', error);
     return null;
   }
 }
@@ -28,62 +25,60 @@ async function getUserFromRequest(request) {
 export async function POST(request) {
   try {
     const data = await request.json();
-    const { provider, model, prompt, sessionId } = data;
+    const { provider, model, prompt, sessionId, context } = data;
     
-    console.debug('DEBUG - Données reçues:', { provider, model, prompt, sessionId });
 
     if (!sessionId) {
-      console.debug('DEBUG - sessionId manquant');
       return NextResponse.json({ error: 'sessionId requis' }, { status: 400 });
     }
 
     const user = await getUserFromRequest(request);
     if (!user) {
-      console.debug('DEBUG - Utilisateur non autorisé');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    console.debug(`DEBUG - Vérification de la session ${sessionId} pour l'utilisateur ${user.userId}`);
     const [sessions] = await pool.query(
       'SELECT * FROM ChatSession WHERE id = ? AND user_id = ?',
       [sessionId, user.userId]
     );
-    console.debug('DEBUG - Résultat de la vérification de session:', sessions);
     if (!sessions || (Array.isArray(sessions) && sessions.length === 0)) {
-      console.debug('DEBUG - Session non autorisée ou introuvable');
       return NextResponse.json({ error: 'Session non autorisée ou introuvable' }, { status: 403 });
     }
 
-    console.debug(`DEBUG - Récupération de l'historique pour la session ${sessionId}`);
-    const [messages] = await pool.query(
-      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp ASC',
+    // Récupérer uniquement les 2 derniers messages (ordre chronologique)
+    const [rows] = await pool.query(
+      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp DESC LIMIT 20',
       [sessionId]
     );
-    console.debug('DEBUG - Historique brut des messages:', messages);
+    const messages = Array.isArray(rows) ? rows.reverse() : (rows ? [rows] : []);
 
-    const conversationHistory = Array.isArray(messages)
-      ? messages.map(m => `${m.role}: ${m.message}`).join('\n')
-      : '';
-    console.debug('DEBUG - Historique formaté:', conversationHistory);
+    // Construire une chaîne de caractères avec ces messages
+    const conversationHistory = messages
+      .map(m => `${m.role}: ${m.message}`)
+      .join('\n');
 
-    const fullPrompt = conversationHistory
-      ? `${conversationHistory}\nUser: ${prompt}`
+    // Si un contexte supplémentaire est fourni, l'ajouter (optionnel)
+    let combinedHistory = conversationHistory;
+    if (context && context.trim()) {
+      combinedHistory = combinedHistory
+        ? `${combinedHistory}\n${context}`
+        : context;
+    }
+
+    // Construire le prompt complet en ajoutant l'historique limité avant le prompt utilisateur
+    const fullPrompt = combinedHistory
+      ? `${combinedHistory}\nUser: ${prompt}`
       : prompt;
-    console.debug('DEBUG - Prompt complet envoyé:', fullPrompt);
 
     let response;
     if (provider === 'mistral') {
-      console.debug('DEBUG - Redirection vers le gestionnaire Mistral avec modèle:', model);
       response = await handleMistralGeneration(request, { model, prompt: fullPrompt });
     } else {
-      console.debug('DEBUG - Redirection vers le gestionnaire GPT avec modèle:', model);
       response = await handleGPTGeneration(request, { model, prompt: fullPrompt });
     }
 
-    console.debug('DEBUG - Réponse de la génération:', response);
     return response;
   } catch (error) {
-    console.error('DEBUG - Erreur dans la route principale de génération:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

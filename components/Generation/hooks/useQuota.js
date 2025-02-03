@@ -16,7 +16,6 @@ export const useQuota = (selectedProvider) => {
       const data = await response.json();
       setQuotaInfo(data);
     } catch (error) {
-      console.error('Erreur de quota:', error);
     }
   };
 

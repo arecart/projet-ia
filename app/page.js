@@ -24,7 +24,6 @@ export default function HomePage() {
           setIsAdmin(data.role === 'admin');
         }
       } catch (error) {
-        console.error('Erreur lors de la vérification du rôle:', error);
         router.push('/login');
       } finally {
         setLoading(false);
@@ -43,7 +42,6 @@ export default function HomePage() {
       router.push('/login');
       router.refresh();
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
     }
   };
 

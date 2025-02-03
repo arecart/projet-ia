@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -28,6 +29,9 @@ export default function LoginPage() {
       
       if (!res.ok) {
         setError(data.error || 'Erreur de connexion');
+        if (data.error && data.error.includes('désactivé')) {
+          setShowErrorModal(true);
+        }
         return;
       }
 
@@ -37,7 +41,6 @@ export default function LoginPage() {
       }, 100);
 
     } catch (err) {
-      console.error('Erreur:', err);
       setError('Erreur de connexion au serveur');
     } finally {
       setIsLoading(false);
@@ -48,6 +51,22 @@ export default function LoginPage() {
     <div className="relative min-h-screen flex items-center justify-center">
       <ParticlesComponent />
       <div className="dynamic-background" />
+
+      {showErrorModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="absolute inset-0 bg-black opacity-60"></div>
+          <div className="bg-gray-900 p-6 rounded shadow-lg z-10 max-w-md w-full border border-gray-700">
+            <h2 className="text-2xl font-bold mb-4 text-white">Erreur</h2>
+            <p className="mb-4 text-gray-300">Votre compte est désactivé.</p>
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}

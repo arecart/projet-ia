@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
 
-export default function AddUserModal({ onClose, refreshUsers }) {
+export default function AddUserModal({ onClose, refreshUsers, onShowToast }) {
   const [userData, setUserData] = useState({
     username: '',
     password: '',
     role: 'user',
+    is_active: true, // Par défaut, l'utilisateur est activé
     quotas: [
-      { model_name: 'gpt-3.5-turbo', max_requests: 50 },
-      { model_name: 'mistral-small-latest', max_requests: 200 },
-      { model_name: 'codestral-latest', max_requests: 100 },
+      { model_name: 'gpt-3.5-turbo', max_requests: 100 },
+      { model_name: 'mistral-small-latest', max_requests: 250 },
+      { model_name: 'codestral-latest', max_requests: 150 },
+      { model_name: 'o3-mini-2025-01-31', max_requests: 50 },
     ],
   });
 
@@ -24,11 +26,11 @@ export default function AddUserModal({ onClose, refreshUsers }) {
       if (!res.ok) {
         throw new Error("Erreur lors de l'ajout de l'utilisateur");
       }
-      // Rafraîchit la liste des utilisateurs dans le parent
       await refreshUsers();
+      onShowToast("Utilisateur ajouté avec succès !", "success");
       onClose();
     } catch (error) {
-      console.error("Erreur ajout user:", error);
+      onShowToast("Erreur lors de l'ajout de l'utilisateur.", "error");
     }
   };
 
@@ -56,7 +58,6 @@ export default function AddUserModal({ onClose, refreshUsers }) {
               required
             />
           </div>
-
           <div className="mb-4">
             <label className="block text-gray-200 mb-2">Mot de passe</label>
             <input
@@ -69,7 +70,6 @@ export default function AddUserModal({ onClose, refreshUsers }) {
               required
             />
           </div>
-
           <div className="mb-4">
             <label className="block text-gray-200 mb-2">Rôle</label>
             <select
@@ -83,7 +83,17 @@ export default function AddUserModal({ onClose, refreshUsers }) {
               <option value="admin">Admin</option>
             </select>
           </div>
-
+          <div className="mb-4 flex items-center">
+            <label className="block text-gray-200 mr-2">Activé</label>
+            <input
+              type="checkbox"
+              checked={userData.is_active}
+              onChange={(e) =>
+                setUserData({ ...userData, is_active: e.target.checked })
+              }
+              className="accent-green-500"
+            />
+          </div>
           <div className="mb-4">
             <label className="block text-gray-200 mb-2">Quotas par modèle</label>
             {userData.quotas.map((quota, index) => (
@@ -100,7 +110,6 @@ export default function AddUserModal({ onClose, refreshUsers }) {
               </div>
             ))}
           </div>
-
           <div className="flex justify-end gap-2">
             <button
               type="button"

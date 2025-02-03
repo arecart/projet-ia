@@ -9,7 +9,6 @@ async function verifyAuth(request) {
   try {
     return await verify(token);
   } catch (err) {
-    console.error('Token verification error:', err);
     return null;
   }
 }
@@ -37,7 +36,6 @@ export async function PUT(request) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des quotas:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

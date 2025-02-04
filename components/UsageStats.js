@@ -13,7 +13,7 @@ import {
   LabelList,
 } from 'recharts';
 
-// Table de tarifs (coûts par million) pour vos IA
+// Table de tarifs (coûts par million de tokens) pour vos IA
 const modelRates = {
   'mistral-small-latest': {
     input: 0.18,
@@ -25,18 +25,22 @@ const modelRates = {
     output: 0.90,
     label: 'Codestral',
   },
-  'gpt-3.5-turbo-0125': {
-    input: 0.50,
-    output: 1.50,
-    label: 'GPT-3.5-Turbo (0125)',
+  'gpt-4o-mini-2024-07-18': {
+    input: 0.15,
+    output: 0.60,
+    label: 'GPT-4o Mini',
   },
-  'o3-mini-2025-01-31': {
+  'o1-mini-2024-09-12': {
     input: 1.10,
     output: 4.40,
-    label: 'O3 Mini',
-  }
+    label: 'O1 Mini',
+  },
+  'gpt-4o-2024-08-06': {
+    input: 2.50,
+    output: 10.00,
+    label: 'GPT-4o',
+  },
 };
-
 
 // Fonction pour formater un float en string (ex. 0.18 => "0,18")
 const formatFloat = (num) => {
@@ -211,8 +215,8 @@ export default function UsageStatsAvecTarifsEtGlobal({ onClose }) {
           <thead>
             <tr className="bg-gray-700 text-gray-200">
               <th className="p-2 text-left">Modèle</th>
-              <th className="p-2 text-left">Coût Input (€/million)</th>
-              <th className="p-2 text-left">Coût Output (€/million)</th>
+              <th className="p-2 text-left">Coût Input ($/million)</th>
+              <th className="p-2 text-left">Coût Output ($/million)</th>
             </tr>
           </thead>
           <tbody>

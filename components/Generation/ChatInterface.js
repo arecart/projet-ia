@@ -1,7 +1,14 @@
 'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import ProviderSelector from './AISelector';
 import ChangePasswordModal from './ChangePasswordModal';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
 
 // ==========================
 // Composant : Header
@@ -42,55 +49,120 @@ function QuotaDisplay({ quotaInfo }) {
 }
 
 // ==========================
+// Composant : CodeBlock
+// ==========================
+function CodeBlock({ className, children }) {
+  const [copied, setCopied] = useState(false);
+  const language = className ? className.replace('language-', '') : '';
+
+  const handleCopy = async () => {
+    try {
+      // Vérification de l'existence de navigator.clipboard et de sa méthode writeText
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(children.trim());
+      } else {
+        // Fallback : création d'un textarea pour copier le texte
+        const textArea = document.createElement('textarea');
+        textArea.value = children.trim();
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Erreur lors de la copie du code :", error);
+    }
+  };
+
+  return (
+    <div className="relative my-2">
+      <pre className={`bg-gray-800 text-gray-100 p-4 rounded-md overflow-auto ${className}`}>
+        <code className={className}>{children}</code>
+      </pre>
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 bg-gray-700 text-white px-2 py-1 text-xs rounded hover:bg-gray-600"
+        title="Copier le code"
+      >
+        {copied ? '✔️ Copié' : '📋 Copier'}
+      </button>
+    </div>
+  );
+}
+
+// ==========================
 // Composant : ChatMessage
 // ==========================
 function ChatMessage({ message }) {
   const isUser = message.role === 'user';
   let displayText = message.message;
   let modelName = null;
+
+  // Si le message provient du bot, on extrait éventuellement le nom du modèle via une balise <MODEL>
   if (!isUser) {
     const regex = /^(.*)\n<MODEL>(.*)<\/MODEL>$/s;
-    const match = message.message.match(regex);
+    const match = displayText.match(regex);
     if (match) {
       displayText = match[1];
       modelName = match[2];
     }
-    displayText = displayText.replace(/```(.*?)```/g, '<code>$1</code>'); // Formatage du code
   }
 
   const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
+  const handleCopyMessage = async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(displayText);
       } else {
-        const textArea = document.createElement("textarea");
+        const textArea = document.createElement('textarea');
         textArea.value = displayText;
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         document.body.removeChild(textArea);
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
+      console.error("Erreur lors de la copie du message :", error);
     }
   };
 
   return (
-    <div className={`mb-4 flex ${isUser ? 'justify-end' : 'justify-start'} relative`}>
+    <div className={`mb-4 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[70%] p-3 rounded-md ${isUser ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-200'} relative`}>
         {!isUser && (
           <button
-            onClick={handleCopy}
-            style={{ bottom: '4px', right: '4px' }}
-            className="absolute text-xs text-gray-400 hover:text-gray-200 p-1"
+            onClick={handleCopyMessage}
+            className="absolute top-2 right-2 text-xs text-gray-400 hover:text-gray-200 p-1"
+            title="Copier le message"
           >
             {copied ? '✔️' : '📋'}
           </button>
         )}
-        <p className="whitespace-pre-wrap">{displayText}</p>
+        <ReactMarkdown
+          className="whitespace-pre-wrap"
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+          components={{
+            code({ node, inline, className, children, ...props }) {
+              if (inline) {
+                return (
+                  <code className={`bg-gray-700 text-white p-1 rounded ${className}`} {...props}>
+                    {children}
+                  </code>
+                );
+              }
+              return <CodeBlock className={className} {...props}>{children}</CodeBlock>;
+            }
+          }}
+        >
+          {displayText}
+        </ReactMarkdown>
         {!isUser && modelName && (
           <p className="mt-1 text-xs text-gray-500 italic">— {modelName}</p>
         )}
@@ -144,6 +216,71 @@ function ChatInput({ value, onChange, onSend, loading, quotaExhausted }) {
 }
 
 // ==========================
+// Composant : SettingsMenu (menu des paramètres via Portal)
+// ==========================
+function SettingsMenu({ onClose, onLogout, onRequestChangePassword, handleDeleteAllSessions, confirmDeleteAll, setConfirmDeleteAll }) {
+  const menuContent = (
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black opacity-70"
+        onClick={onClose}
+      ></div>
+      <div className="bg-gray-900 rounded-lg shadow-xl p-4 relative z-50">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-200"
+          title="Fermer"
+        >
+          ✕
+        </button>
+        <h3 className="text-xl font-semibold text-gray-100 mb-4 text-center">
+          Paramètres
+        </h3>
+        {confirmDeleteAll ? (
+          <div className="flex flex-col gap-2 mb-4">
+            <button
+              onClick={handleDeleteAllSessions}
+              className="w-full px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
+            >
+              Confirmer la suppression
+            </button>
+            <button
+              onClick={() => setConfirmDeleteAll(false)}
+              className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-md transition duration-300"
+            >
+              Annuler
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDeleteAll(true)}
+            className="w-full mb-4 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
+          >
+            Supprimer toutes les sessions
+          </button>
+        )}
+        <button
+          onClick={() => {
+            onRequestChangePassword();
+            onClose();
+          }}
+          className="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition duration-300"
+        >
+          Changer le mot de passe
+        </button>
+        <button
+          onClick={onLogout}
+          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
+        >
+          Déconnexion
+        </button>
+      </div>
+    </div>
+  );
+  return createPortal(menuContent, document.body);
+}
+
+// ==========================
 // Composant : LeftMenu
 // ==========================
 function LeftMenu({ 
@@ -167,11 +304,7 @@ function LeftMenu({
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [showAllSessions, setShowAllSessions] = useState(false);
 
-  const displayedSessions =
-    sessions.length > 5 && !showAllSessions
-      ? sessions.slice(0, 5)
-      : sessions;
-
+  const displayedSessions = sessions.length > 5 && !showAllSessions ? sessions.slice(0, 5) : sessions;
   const canCreateSession = sessions.length < 100;
 
   const handleDeleteAllSessions = () => {
@@ -184,7 +317,6 @@ function LeftMenu({
 
   return (
     <div className="w-1/4 bg-gray-800 text-white p-4 h-screen sticky top-0 flex flex-col justify-between overflow-y-auto scrollbar-hide">
-      {/* Partie supérieure : Quota et sessions */}
       <div>
         <div className="mb-6">
           <QuotaDisplay quotaInfo={quotaInfo} />
@@ -200,9 +332,7 @@ function LeftMenu({
                     onSelectSession(session);
                   }}
                   className={`w-full text-left p-2 rounded-md transition-colors duration-300 ${
-                    selectedSession && selectedSession.id === session.id
-                      ? 'bg-purple-600'
-                      : 'bg-gray-700 hover:bg-gray-600'
+                    selectedSession && selectedSession.id === session.id ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'
                   }`}
                 >
                   {session.session_name || `Session ${session.id}`}
@@ -254,7 +384,9 @@ function LeftMenu({
               type="text"
               placeholder="Nom de la session..."
               disabled={!canCreateSession}
-              className={`w-full p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 transition duration-300 ${!canCreateSession && 'opacity-50 cursor-not-allowed'}`}
+              className={`w-full p-2 border rounded-md bg-gray-700 text-white placeholder-gray-400 transition duration-300 ${
+                !canCreateSession && 'opacity-50 cursor-not-allowed'
+              }`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.target.value.trim() && canCreateSession) {
                   onCreateSession(e.target.value.trim());
@@ -271,7 +403,9 @@ function LeftMenu({
                 }
               }}
               disabled={!canCreateSession}
-              className={`w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 rounded-md transition duration-300 ${!canCreateSession && 'opacity-50 cursor-not-allowed'}`}
+              className={`w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 rounded-md transition duration-300 ${
+                !canCreateSession && 'opacity-50 cursor-not-allowed'
+              }`}
             >
               Nouvelle session
             </button>
@@ -291,8 +425,6 @@ function LeftMenu({
           </div>
         </div>
       </div>
-
-      {/* Partie inférieure : Bouton Paramètres */}
       <div className="flex justify-center">
         <button
           onClick={() => setShowSettings(true)}
@@ -306,70 +438,24 @@ function LeftMenu({
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0-5c.69 0 1.332.178 1.888.488l.5.25 1.18-2.05a1 1 0 011.516 1.116l-.5 2.05 2.05.5a1 1 0 01.116 1.516l-2.05 1.18.25.5A7.978 7.978 0 0120 12c0 .69-.178 1.332-.488 1.888l-.25.5 2.05 1.18a1 1 0 01-1.116 1.516l-2.05-.5-.5 2.05A7.978 7.978 0 0112 20c-.69 0-1.332-.178-1.888-.488l-.5-.25-1.18 2.05a1 1 0 01-1.516-1.116l.5-2.05-2.05-.5a1 1 0 01-.116-1.516l2.05-1.18-.25-.5A7.978 7.978 0 014 12c0-.69.178-1.332.488-1.888l.25-.5-2.05-1.18a1 1 0 011.116-1.516l2.05.5.5-2.05A7.978 7.978 0 0112 4z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0-5c.69 0 1.332.178 1.888.488l.5.25 1.18-2.05a1 1 0 011.516 1.116l-.5 2.05 2.05.5a1 1 0 01.116 1.516l-2.05 1.18.25.5A7.978 7.978 0 0120 12c0 .69-.178 1.332-.488 1.888l-.25.5 2.05 1.18a1 1 0 01-1.116 1.516l-2.05-.5-.5 2.05A7.978 7.978 0 0112 20c-.69 0-1.332-.178-1.888-.488l-.5-.25-1.18 2.05a1 1 0 01-1.516-1.116l.5-2.05-2.05-.5a1 1 0 01-.116-1.516l2.05-1.18-.25-.5A7.978 7.978 0 014 12c0-.69.178-1.332.488-1.888l.25-.5-2.05-1.18a1 1 0 011.116-1.516l2.05.5.5-2.05A7.978 7.978 0 0112 4z"
+            />
           </svg>
         </button>
       </div>
-
-      {/* Pop-up des paramètres */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black opacity-70"
-            onClick={() => setShowSettings(false)}
-          ></div>
-          <div className="bg-gray-900 rounded-lg shadow-xl p-4 relative z-50">
-            <button
-              onClick={() => setShowSettings(false)}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-200"
-              title="Fermer"
-            >
-              ✕
-            </button>
-            <h3 className="text-xl font-semibold text-gray-100 mb-4 text-center">
-              Paramètres
-            </h3>
-            {confirmDeleteAll ? (
-              <div className="flex flex-col gap-2 mb-4">
-                <button
-                  onClick={handleDeleteAllSessions}
-                  className="w-full px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
-                >
-                  Confirmer la suppression
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteAll(false)}
-                  className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-md transition duration-300"
-                >
-                  Annuler
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDeleteAll(true)}
-                className="w-full mb-4 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
-              >
-                Supprimer toutes les sessions
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                onRequestChangePassword();
-                setShowSettings(false);
-              }}
-              className="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md shadow-md transition duration-300"
-            >
-              Changer le mot de passe
-            </button>
-            <button
-              onClick={onLogout}
-              className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md shadow-md transition duration-300"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
+        <SettingsMenu
+          onClose={() => setShowSettings(false)}
+          onLogout={onLogout}
+          onRequestChangePassword={onRequestChangePassword}
+          handleDeleteAllSessions={handleDeleteAllSessions}
+          confirmDeleteAll={confirmDeleteAll}
+          setConfirmDeleteAll={setConfirmDeleteAll}
+        />
       )}
     </div>
   );
@@ -388,6 +474,7 @@ function useSessions(userId) {
       const { sessions: data } = await response.json();
       setSessions(data);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -404,6 +491,8 @@ function useSessions(userId) {
       await fetchSessions();
       return session;
     } catch (error) {
+      console.error(error);
+      return null;
     }
   };
 
@@ -418,6 +507,7 @@ function useSessions(userId) {
       if (!response.ok) throw new Error('Erreur lors de la suppression de la session');
       await fetchSessions();
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -443,16 +533,12 @@ function useChatMessages(sessionId) {
     try {
       const take = 20;
       const skip = loadMore ? messagesLoaded : 0;
-
       const response = await fetch(
         `/api/chat/message?sessionId=${sessionId}&skip=${skip}&take=${take}`
       );
-
       if (!response.ok) throw new Error('Erreur lors de la récupération des messages');
       const { messages: newMessages, total } = await response.json();
-
       setTotalMessages(total);
-
       if (loadMore) {
         setMessages(prev => [...newMessages, ...prev]);
         setMessagesLoaded(prev => prev + take);
@@ -460,7 +546,6 @@ function useChatMessages(sessionId) {
         setMessages(newMessages);
         setMessagesLoaded(take);
       }
-
     } catch (error) {
       console.error(error);
     } finally {
@@ -496,6 +581,7 @@ function useQuota(userId, selectedModel) {
       const data = await response.json();
       setQuotaInfo(data);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -515,16 +601,36 @@ function useQuota(userId, selectedModel) {
 // ==========================
 export default function ChatInterface({ onLogout, onDashboard, role = 'user' }) {
   const user = { id: 1, username: 'admin' };
-  const [selectedProvider, setSelectedProvider] = useState('gpt');
-  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
+
+  // Chargement de l'IA favorite depuis le localStorage, ou utilisation de valeurs par défaut
+  const defaultFavorite = (() => {
+    const fav = localStorage.getItem('favoriteAI');
+    if (fav) {
+      try {
+        return JSON.parse(fav);
+      } catch (e) {
+        console.error("Erreur lors du parsing de l'IA favorite", e);
+      }
+    }
+    return null;
+  })();
+
+  const [selectedProvider, setSelectedProvider] = useState(
+    defaultFavorite ? defaultFavorite.provider : 'gpt'
+  );
+  const [selectedModel, setSelectedModel] = useState(
+    defaultFavorite ? defaultFavorite.model : 'gpt-4o-mini-2024-07-18'
+  );
+
   const { quotaInfo, refreshQuota } = useQuota(user.id, selectedModel);
   const { sessions, createSession, deleteSession } = useSessions(user.id);
   const [selectedSession, setSelectedSession] = useState(null);
-  const { messages, loadingMessages, loadMoreMessages, totalMessages, setMessages } = useChatMessages(selectedSession ? selectedSession.id : null);
+  const { messages, loadingMessages, loadMoreMessages, totalMessages, setMessages } = useChatMessages(
+    selectedSession ? selectedSession.id : null
+  );
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
-
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const scrollToBottom = () => {
@@ -545,6 +651,7 @@ export default function ChatInterface({ onLogout, onDashboard, role = 'user' }) 
         window.location.href = '/login';
       }
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -579,6 +686,7 @@ export default function ChatInterface({ onLogout, onDashboard, role = 'user' }) 
       });
       if (!quotaResponse.ok) {
         const errorData = await quotaResponse.json();
+        alert(errorData.message || "Erreur de quota.");
         setSending(false);
         return;
       }
@@ -637,6 +745,7 @@ export default function ChatInterface({ onLogout, onDashboard, role = 'user' }) 
         }
       }, 300);
     } catch (error) {
+      console.error(error);
       await fetch('/api/chat/message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -700,19 +809,21 @@ export default function ChatInterface({ onLogout, onDashboard, role = 'user' }) 
             <p>Chargement des messages...</p>
           ) : (
             <>
-              <div className="text-center mb-4">
-                <button
-                  onClick={() => loadMoreMessages()}
-                  disabled={messages.length >= totalMessages || loadingMessages}
-                  className={`px-4 py-2 rounded-md ${
-                    messages.length >= totalMessages || loadingMessages
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  } text-white transition-colors`}
-                >
-                  {loadingMessages ? 'Chargement...' : 'Afficher les anciens messages'}
-                </button>
-              </div>
+              {messages.length > 0 && (
+                <div className="text-center mb-4">
+                  <button
+                    onClick={() => loadMoreMessages()}
+                    disabled={messages.length >= totalMessages || loadingMessages}
+                    className={`px-4 py-2 rounded-md ${
+                      messages.length >= totalMessages || loadingMessages
+                        ? 'bg-gray-600 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white transition-colors`}
+                  >
+                    {loadingMessages ? 'Chargement...' : 'Afficher les anciens messages'}
+                  </button>
+                </div>
+              )}
               {messages.map((msg) => (
                 <ChatMessage key={msg.id} message={msg} />
               ))}

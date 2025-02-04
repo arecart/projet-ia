@@ -5,10 +5,6 @@ import pool from '@/app/db';
 import { handleMistralGeneration } from './mistral/route';
 import { handleGPTGeneration } from './gpt/route';
 
-/**
- * Récupère l'utilisateur connecté depuis le token.
- * On suppose que le token contient au moins { userId, username, ... }.
- */
 async function getUserFromRequest(request) {
   const token = request.cookies.get('token')?.value;
   if (!token) {
@@ -27,7 +23,6 @@ export async function POST(request) {
     const data = await request.json();
     const { provider, model, prompt, sessionId, context } = data;
     
-
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId requis' }, { status: 400 });
     }
@@ -45,19 +40,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Session non autorisée ou introuvable' }, { status: 403 });
     }
 
-    // Récupérer uniquement les 2 derniers messages (ordre chronologique)
     const [rows] = await pool.query(
       'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp DESC LIMIT 20',
       [sessionId]
     );
     const messages = Array.isArray(rows) ? rows.reverse() : (rows ? [rows] : []);
+    const conversationHistory = messages.map(m => `${m.role}: ${m.message}`).join('\n');
 
-    // Construire une chaîne de caractères avec ces messages
-    const conversationHistory = messages
-      .map(m => `${m.role}: ${m.message}`)
-      .join('\n');
-
-    // Si un contexte supplémentaire est fourni, l'ajouter (optionnel)
     let combinedHistory = conversationHistory;
     if (context && context.trim()) {
       combinedHistory = combinedHistory
@@ -65,13 +54,13 @@ export async function POST(request) {
         : context;
     }
 
-    // Construire le prompt complet en ajoutant l'historique limité avant le prompt utilisateur
     const fullPrompt = combinedHistory
       ? `${combinedHistory}\nUser: ${prompt}`
       : prompt;
 
     let response;
-    if (provider === 'mistral') {
+    // Ici, en fonction du provider, on dirige l'appel vers la bonne fonction.
+    if (provider === 'mistral' || provider === 'o3-mini') {
       response = await handleMistralGeneration(request, { model, prompt: fullPrompt });
     } else {
       response = await handleGPTGeneration(request, { model, prompt: fullPrompt });

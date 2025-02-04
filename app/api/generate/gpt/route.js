@@ -3,85 +3,89 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { verify } from '@/utils/jwt';
 
+// Initialisation de l'API OpenAI avec la clé
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Mapping des alias vers les noms complets de modèle
+const aliasMapping = {
+  "gpt-4o": "gpt-4o-2024-08-06",
+  "gpt-4o-mini": "gpt-4o-mini-2024-07-18",
+  "o1-mini": "o1-mini-2024-09-12",
+};
+
 async function trackUsage(tokenCookie, userId, modelName, promptTokens, completionTokens, totalTokens) {
   try {
+    //console.debug("trackUsage: Appel à l'endpoint track-usage pour le modèle", modelName);
     const response = await fetch('http://localhost:3000/api/track-usage', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // On passe le cookie "token"
+        // Transmission du cookie token
         Cookie: `token=${tokenCookie}`,
       },
       body: JSON.stringify({
         userId,
-        modelName, // On envoie "gpt-3.5-turbo-0125"
+        modelName,
         promptTokens,
         completionTokens,
         totalTokens,
       }),
     });
-
     if (!response.ok) {
+      //console.error("trackUsage: Erreur lors du tracking, status:", response.status);
       return null;
     }
-
     return await response.json();
   } catch (error) {
+    //console.error("trackUsage: Exception levée", error);
     return null;
   }
 }
 
 export async function handleGPTGeneration(request, data) {
   try {
-    // Récupération du token "token"
+    //console.debug("handleGPTGeneration: Début d'exécution");
+    // Récupération du cookie "token"
     const cookieStore = request.cookies.get('token');
     const tokenCookie = cookieStore?.value;
-
     let userId = null;
 
-    // Vérification du token
     if (tokenCookie) {
       try {
         const decoded = await verify(tokenCookie);
         userId = decoded.userId;
+        //console.debug("handleGPTGeneration: Token vérifié pour l'utilisateur", userId);
       } catch (error) {
-        return NextResponse.json(
-          { error: 'Invalid authentication token' },
-          { status: 401 }
-        );
+        //console.error("handleGPTGeneration: Token invalide", error);
+        return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
       }
     }
-
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      //console.error("handleGPTGeneration: Authentification requise");
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Récupérer le prompt depuis les données passées
-    const { prompt } = data;
+    // Récupération du prompt et du modèle passé en paramètre
+    const { prompt, model } = data;
     if (!prompt) {
-      return NextResponse.json(
-        { error: 'Prompt is required' },
-        { status: 400 }
-      );
+      //console.error("handleGPTGeneration: Le prompt est requis");
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
+    
+    // Application du mapping d'alias
+    const modelName = aliasMapping[model] || model;
+    //console.debug("handleGPTGeneration: Utilisation du modèle", modelName);
 
-    // Définir le modèle (ici GPT-3.5 Turbo)
-    const modelName = "gpt-3.5-turbo-0125";
-
-    // Appel à OpenAI pour générer la réponse
+    // Appel à l'API OpenAI pour générer la réponse
     const completion = await openai.chat.completions.create({
       model: modelName,
       messages: [{ role: "user", content: prompt }],
     });
+    //console.debug("handleGPTGeneration: Réponse OpenAI reçue", completion);
 
-    // Pister l'usage si OpenAI retourne des informations d'usage
+    // Suivi de l'usage si disponible
     if (completion.usage) {
       await trackUsage(
         tokenCookie,
@@ -93,19 +97,15 @@ export async function handleGPTGeneration(request, data) {
       );
     }
 
-    // Retourner le résultat de la génération
     return NextResponse.json({
       text: completion.choices[0].message.content,
       usage: completion.usage,
     });
 
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to generate response' },
-      { status: 500 }
-    );
+    //console.error("handleGPTGeneration: Exception levée", error);
+    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
   }
 }
 
-// Exporte la fonction de génération en tant que méthode POST
 export { handleGPTGeneration as POST };

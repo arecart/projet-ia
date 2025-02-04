@@ -2,11 +2,23 @@
 'use client';
 import React from 'react';
 
-export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalUser, onShowToast }) {
+export default function QuotaModal({
+  user,
+  onClose,
+  onSaveQuotas,
+  setQuotaModalUser,
+  onShowToast
+}) {
   const handleChange = (index, value) => {
     const updatedQuotas = [...user.quotas];
     updatedQuotas[index].max_requests = parseInt(value, 10) || 0;
     setQuotaModalUser({ ...user, quotas: updatedQuotas });
+  };
+
+  const handleDelete = (index) => {
+    const updatedQuotas = user.quotas.filter((_, i) => i !== index);
+    setQuotaModalUser({ ...user, quotas: updatedQuotas });
+    onShowToast("IA supprimée avec succès !", "success");
   };
 
   const handleSave = async () => {
@@ -54,22 +66,33 @@ export default function QuotaModal({ user, onClose, onSaveQuotas, setQuotaModalU
           Gérer les quotas de <span className="text-blue-300">{user.username}</span>
         </h2>
 
-        <div className="mb-6 space-y-4">
+        {/* Conteneur défilable en cas de trop d'éléments */}
+        <div className="mb-6 space-y-4 max-h-80 overflow-y-auto">
           {user.quotas?.map((q, index) => (
-            <div key={q.model_name} className="flex flex-col gap-1">
+            <div key={q.model_name} className="flex flex-col gap-1 border-b border-gray-700 pb-2">
               <div className="flex items-center justify-between">
-                <label className="w-40 text-gray-200 font-medium">{q.model_name} :</label>
+                <label className="w-40 text-gray-200 font-medium">
+                  {q.model_name} :
+                </label>
                 <span className="text-gray-400 text-sm">
                   Déjà effectué : {q.request_count ?? 0} requêtes
                 </span>
               </div>
-              <input
-                type="number"
-                className="bg-gray-700 text-white rounded px-3 py-2"
-                value={q.max_requests}
-                onChange={(e) => handleChange(index, e.target.value)}
-                min="0"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="bg-gray-700 text-white rounded px-3 py-2 flex-1"
+                  value={q.max_requests}
+                  onChange={(e) => handleChange(index, e.target.value)}
+                  min="0"
+                />
+                <button
+                  onClick={() => handleDelete(index)}
+                  className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           ))}
         </div>

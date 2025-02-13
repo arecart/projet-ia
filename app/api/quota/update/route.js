@@ -25,12 +25,49 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Format invalide' }, { status: 400 });
     }
     
+    // Si l'utilisateur connecté est admin et que body.userId est fourni,
+    // alors c'est l'admin qui met à jour les quotas d'un autre utilisateur.
+    // Sinon, on met à jour les quotas de l'utilisateur connecté.
+    let targetUserId = decoded.userId;
+    if (decoded.role === 'admin' && body.userId) {
+      targetUserId = body.userId;
+    }
+    
+    // Récupération de la liste des model_names présents dans le payload
+    const updatedModels = body.quotas.map(q => q.model_name);
+    
+    // Supprimer les quotas de l'utilisateur qui ne figurent plus dans le payload
+    if (updatedModels.length > 0) {
+      const placeholders = updatedModels.map(() => '?').join(',');
+      await pool.execute(
+        `DELETE FROM user_model_quotas
+         WHERE user_id = ?
+         AND model_name NOT IN (${placeholders})`,
+        [targetUserId, ...updatedModels]
+      );
+    } else {
+      // Si aucun quota n'est fourni, on supprime tous les quotas pour cet utilisateur
+      await pool.execute(
+        `DELETE FROM user_model_quotas
+         WHERE user_id = ?`,
+        [targetUserId]
+      );
+    }
+    
+    // Pour chaque quota fourni, on met à jour ses valeurs
     for (const q of body.quotas) {
+      const maxRequests = isNaN(parseInt(q.max_requests, 10))
+        ? 0
+        : parseInt(q.max_requests, 10);
+      const maxLongRequests = isNaN(parseInt(q.max_long_requests, 10))
+        ? 0
+        : parseInt(q.max_long_requests, 10);
+      
       await pool.execute(
         `UPDATE user_model_quotas
-         SET max_requests = ?
-         WHERE id = ? AND user_id = ?`,
-        [q.max_requests, q.id, decoded.userId]
+         SET max_requests = ?, max_long_requests = ?
+         WHERE user_id = ? AND model_name = ?`,
+        [maxRequests, maxLongRequests, targetUserId, q.model_name]
       );
     }
     

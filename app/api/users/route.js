@@ -1,3 +1,4 @@
+// /api/users/route.js
 import { NextResponse } from 'next/server';
 import pool from '@/app/db';
 
@@ -6,7 +7,7 @@ export async function GET() {
   try {
     conn = await pool.getConnection();
     
-    // Récupérer les utilisateurs
+    // Récupérer tous les utilisateurs
     const users = await conn.query(`
       SELECT
         id,
@@ -18,13 +19,15 @@ export async function GET() {
       FROM users
     `);
 
-    // Récupérer les quotas pour chaque utilisateur
+    // Pour chaque utilisateur, récupérer ses quotas (incluant les quotas longs)
     const usersWithQuotas = await Promise.all(users.map(async (user) => {
       const quotas = await conn.query(`
         SELECT
           model_name,
           request_count,
           max_requests,
+          long_request_count,
+          max_long_requests,
           last_request_reset
         FROM user_model_quotas
         WHERE user_id = ?
@@ -32,15 +35,12 @@ export async function GET() {
 
       const quotasWithInfo = quotas.map(quota => {
         const now = new Date();
-        const resetTime = quota.last_request_reset 
-          ? new Date(quota.last_request_reset)
-          : new Date(0);
-        
+        const resetTime = quota.last_request_reset ? new Date(quota.last_request_reset) : new Date(0);
         const timeUntilReset = Math.max(0, 3 * 60 * 60 * 1000 - (now - resetTime));
-        
         return {
           ...quota,
           remaining: Math.max(0, quota.max_requests - quota.request_count),
+          longRemaining: Math.max(0, quota.max_long_requests - quota.long_request_count),
           resetIn: timeUntilReset,
           resetInHours: Math.ceil(timeUntilReset / (60 * 60 * 1000))
         };
@@ -51,7 +51,6 @@ export async function GET() {
         quotas: quotasWithInfo
       };
     }));
-
 
     return NextResponse.json(usersWithQuotas);
   } catch (err) {
@@ -78,22 +77,24 @@ export async function POST(request) {
       'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
       [username, password, role]
     );
-
     const userId = userResult.insertId;
 
-    // Insérer les quotas pour chaque modèle
+    // Définir les quotas par défaut avec les nouveaux modèles
     const defaultQuotas = [
-      { model_name: 'gpt-3.5-turbo', max_requests: 10 },
-      { model_name: 'mistral-small-latest', max_requests: 10 },
-      { model_name: 'o3-mini-2025-01-31', max_requests: 10 }
+      { model_name: 'gpt-4o-mini-2024-07-18', max_requests: 10, max_long_requests: 10 },
+      { model_name: 'gpt-4o',                max_requests: 10, max_long_requests: 10 },
+      { model_name: 'o1-mini-2024-09-12',      max_requests: 10, max_long_requests: 10 },
+      { model_name: 'mistral-small-latest',    max_requests: 10, max_long_requests: 10 },
+      { model_name: 'mistral-large-latest',    max_requests: 10, max_long_requests: 10 },
+      { model_name: 'pixtral-large-latest',    max_requests: 10, max_long_requests: 10 }
     ];
 
     const quotasToInsert = quotas || defaultQuotas;
 
-    await Promise.all(quotasToInsert.map(quota => 
+    await Promise.all(quotasToInsert.map(quota =>
       conn.query(
-        'INSERT INTO user_model_quotas (user_id, model_name, max_requests) VALUES (?, ?, ?)',
-        [userId, quota.model_name, quota.max_requests]
+        'INSERT INTO user_model_quotas (user_id, model_name, max_requests, max_long_requests) VALUES (?, ?, ?, ?)',
+        [userId, quota.model_name, quota.max_requests, quota.max_long_requests]
       )
     ));
 
@@ -107,7 +108,7 @@ export async function POST(request) {
     );
 
     const userQuotas = await conn.query(
-      'SELECT model_name, request_count, max_requests, last_request_reset FROM user_model_quotas WHERE user_id = ?',
+      'SELECT model_name, request_count, max_requests, long_request_count, max_long_requests, last_request_reset FROM user_model_quotas WHERE user_id = ?',
       [userId]
     );
 
@@ -117,9 +118,7 @@ export async function POST(request) {
     }, { status: 201 });
 
   } catch (error) {
-    if (conn) {
-      await conn.rollback();
-    }
+    if (conn) await conn.rollback();
     return NextResponse.json(
       { error: 'Erreur lors de la création de l\'utilisateur' },
       { status: 500 }
@@ -142,16 +141,14 @@ export async function DELETE(request) {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // Supprimer d'abord les quotas (la contrainte ON DELETE CASCADE s'en chargera automatiquement)
+    // Supprimer l'utilisateur (les quotas seront supprimés par la contrainte ON DELETE CASCADE)
     await conn.query('DELETE FROM users WHERE id = ?', [id]);
 
     await conn.commit();
 
     return NextResponse.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
-    if (conn) {
-      await conn.rollback();
-    }
+    if (conn) await conn.rollback();
     return NextResponse.json(
       { error: 'Erreur lors de la suppression de l\'utilisateur' },
       { status: 500 }

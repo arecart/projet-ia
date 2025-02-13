@@ -26,6 +26,8 @@ export async function GET(request) {
          model_name,
          request_count,
          max_requests,
+         long_request_count,
+         max_long_requests,
          last_request_reset
        FROM user_model_quotas
        WHERE user_id = ?`,
@@ -38,6 +40,7 @@ export async function GET(request) {
       return {
         ...quota,
         remaining: Math.max(0, quota.max_requests - quota.request_count),
+        longRemaining: Math.max(0, quota.max_long_requests - quota.long_request_count),
         resetIn: timeUntilReset,
         resetInHours: Math.ceil(timeUntilReset / (60 * 60 * 1000))
       };
@@ -68,11 +71,15 @@ export async function PUT(request) {
     
     // Mise à jour des quotas si fournis
     if (quotas && quotas.length > 0) {
+      // Supprimer les anciens quotas
       await conn.query('DELETE FROM user_model_quotas WHERE user_id = ?', [id]);
       for (const quota of quotas) {
+        // Si la valeur pour max_long_requests est fournie, l'utiliser ; sinon, prendre la valeur par défaut (par exemple, 10)
+        const maxLong = quota.max_long_requests !== undefined ? quota.max_long_requests : 10;
         await conn.query(
-          'INSERT INTO user_model_quotas (user_id, model_name, max_requests) VALUES (?, ?, ?)',
-          [id, quota.model_name, quota.max_requests]
+          `INSERT INTO user_model_quotas (user_id, model_name, max_requests, max_long_requests)
+           VALUES (?, ?, ?, ?)`,
+          [id, quota.model_name, quota.max_requests, maxLong]
         );
       }
     }

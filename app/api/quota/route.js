@@ -34,15 +34,15 @@ export async function GET(request) {
       modelParam = 'o3-mini-2025-01-31';
     }
 
-    // Exécution de la requête SQL
+    // Exécution de la requête SQL pour récupérer les quotas normaux et longs
     const result = await pool.execute(
-      `SELECT id, request_count, max_requests, last_request_reset 
+      `SELECT id, request_count, max_requests, long_request_count, max_long_requests, last_request_reset 
        FROM user_model_quotas 
        WHERE user_id = ? AND model_name = ?`,
       [decoded.userId, modelParam]
     );
 
-    // Pour MariaDB, result[0] doit contenir les lignes, mais on vérifie :
+    // Pour MariaDB, result[0] doit contenir les lignes
     let rows = [];
     if (result) {
       if (Array.isArray(result[0])) {
@@ -52,40 +52,54 @@ export async function GET(request) {
       }
     }
 
-    // Si aucune entrée n'existe, on en crée une en initialisant last_request_reset à la date actuelle
+    // Si aucune entrée n'existe, on en crée une avec des valeurs par défaut pour normal et long quotas
     if (!rows || rows.length === 0) {
       const now = new Date();
       await pool.execute(
         `INSERT INTO user_model_quotas 
-         (user_id, model_name, request_count, max_requests, last_request_reset)
-         VALUES (?, ?, 0, 10, ?)`,
+         (user_id, model_name, request_count, max_requests, long_request_count, max_long_requests, last_request_reset)
+         VALUES (?, ?, 0, 10, 0, 10, ?)`,
         [decoded.userId, modelParam, now]
       );
       return NextResponse.json({
         current: 0,
         max: 10,
         remaining: 10,
+        longCurrent: 0,
+        longMax: 10,
+        longRemaining: 10,
       });
     }
 
     // Utiliser la première ligne retournée
     const row = rows[0];
     if (!row) {
-      // En cas de problème, renvoyer des valeurs par défaut
       return NextResponse.json({
         current: 0,
         max: 10,
         remaining: 10,
+        longCurrent: 0,
+        longMax: 10,
+        longRemaining: 10,
       });
     }
 
-    const currentCount = parseInt(row.request_count, 10) || 0;
-    const maxRequests = parseInt(row.max_requests, 10) || 10;
+    // Utilisation de la valeur stockée ou d'un fallback uniquement si null ou undefined
+    const currentCount = row.request_count != null ? parseInt(row.request_count, 10) : 0;
+    const maxRequests = row.max_requests != null ? parseInt(row.max_requests, 10) : 10;
+    const remaining = Math.max(0, maxRequests - currentCount);
+
+    const longCurrent = row.long_request_count != null ? parseInt(row.long_request_count, 10) : 0;
+    const longMax = row.max_long_requests != null ? parseInt(row.max_long_requests, 10) : 10;
+    const longRemaining = Math.max(0, longMax - longCurrent);
 
     return NextResponse.json({
       current: currentCount,
       max: maxRequests,
-      remaining: Math.max(0, maxRequests - currentCount),
+      remaining,
+      longCurrent,
+      longMax,
+      longRemaining,
     });
   } catch (error) {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

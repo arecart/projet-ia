@@ -36,6 +36,8 @@ CREATE TABLE user_model_quotas (
   model_name VARCHAR(255) NOT NULL,
   request_count INT DEFAULT 0,
   max_requests INT DEFAULT 10,
+  long_request_count INT DEFAULT 0,        
+  max_long_requests INT DEFAULT 10,          
   last_request_reset TIMESTAMP NULL DEFAULT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   restoration_applied DECIMAL(3,2) DEFAULT 0,

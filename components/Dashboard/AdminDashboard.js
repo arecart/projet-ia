@@ -170,7 +170,6 @@ export default function AdminDashboard({ onLogout }) {
       await fetchUsers();
       showToast("Quota mis à jour avec succès !", "success");
     } catch (error) {
-      console.error('Erreur de mise à jour quotas:', error);
       showToast("Erreur lors de la mise à jour du quota.", "error");
     }
   };

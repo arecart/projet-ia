@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ParticlesComponent from '../../ParticlesComponent';
+import ParticlesComponent from '../../components/ParticlesComponent';
 
 const CopyIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

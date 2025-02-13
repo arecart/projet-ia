@@ -22,7 +22,7 @@ export async function POST(request) {
   try {
     const data = await request.json();
     const { provider, model, prompt, sessionId, context } = data;
-    
+
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId requis' }, { status: 400 });
     }
@@ -59,8 +59,8 @@ export async function POST(request) {
       : prompt;
 
     let response;
-    // Ici, en fonction du provider, on dirige l'appel vers la bonne fonction.
-    if (provider === 'mistral' || provider === 'o3-mini') {
+    // Ajout de 'pixtral' dans la condition pour rediriger vers handleMistralGeneration
+    if (provider === 'mistral' || provider === 'o3-mini' || provider === 'pixtral') {
       response = await handleMistralGeneration(request, { model, prompt: fullPrompt });
     } else {
       response = await handleGPTGeneration(request, { model, prompt: fullPrompt });

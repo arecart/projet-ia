@@ -4,7 +4,7 @@ import pool from '@/app/db';
 
 /**
  * POST /api/users/add
- * Création d'un nouvel utilisateur avec quotas par modèle
+ * Création d'un nouvel utilisateur avec quotas par modèle (y compris les quotas longs)
  */
 export async function POST(request) {
   let conn;
@@ -22,7 +22,7 @@ export async function POST(request) {
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    // Vérifier si l'utilisateur existe déjà (pas de déstructuration)
+    // Vérifier si l'utilisateur existe déjà
     const existingUsers = await conn.query(
       'SELECT username FROM users WHERE username = ?',
       [username]
@@ -51,19 +51,25 @@ export async function POST(request) {
 
     const userId = userInsertResult.insertId;
 
-    // Insérer les quotas pour chaque modèle
+    // Définir les quotas par défaut avec les nouveaux modèles et quotas longs
     const defaultQuotas = [
-      { model_name: 'gpt-3.5-turbo', max_requests: 10 },
-      { model_name: 'mistral-small-latest', max_requests: 10 }
+      { model_name: 'gpt-4o-mini-2024-07-18', max_requests: 10, max_long_requests: 10 },
+      { model_name: 'gpt-4o',                max_requests: 10, max_long_requests: 10 },
+      { model_name: 'o1-mini-2024-09-12',      max_requests: 10, max_long_requests: 10 },
+      { model_name: 'mistral-small-latest',    max_requests: 10, max_long_requests: 10 },
+      { model_name: 'mistral-large-latest',    max_requests: 10, max_long_requests: 10 },
+      { model_name: 'pixtral-large-latest',    max_requests: 10, max_long_requests: 10 }
     ];
 
-    const quotasToInsert = quotas?.length > 0 ? quotas : defaultQuotas;
+    // Utiliser les quotas fournis ou les quotas par défaut
+    const quotasToInsert = quotas && quotas.length > 0 ? quotas : defaultQuotas;
 
+    // Insérer pour chaque modèle les quotas normaux et longs
     await Promise.all(
       quotasToInsert.map(quota =>
         conn.query(
-          'INSERT INTO user_model_quotas (user_id, model_name, max_requests) VALUES (?, ?, ?)',
-          [userId, quota.model_name, quota.max_requests]
+          'INSERT INTO user_model_quotas (user_id, model_name, max_requests, max_long_requests) VALUES (?, ?, ?, ?)',
+          [userId, quota.model_name, quota.max_requests, quota.max_long_requests]
         )
       )
     );
@@ -78,12 +84,8 @@ export async function POST(request) {
       [userId]
     );
 
-    if (!newUserRows || newUserRows.length === 0) {
-      throw new Error('Impossible de récupérer l\'utilisateur nouvellement créé');
-    }
-
     const userQuotas = await conn.query(
-      `SELECT model_name, max_requests, request_count, last_request_reset
+      `SELECT model_name, max_requests, request_count, long_request_count, max_long_requests, last_request_reset
        FROM user_model_quotas
        WHERE user_id = ?`,
       [userId]
@@ -103,7 +105,7 @@ export async function POST(request) {
       await conn.rollback();
     }
     return NextResponse.json(
-      { error: 'Erreur interne du serveur.' },
+      { error: 'Erreur lors de la création de l\'utilisateur' },
       { status: 500 }
     );
   } finally {

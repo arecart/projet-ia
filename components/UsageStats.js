@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaArrowLeft, FaChartBar, FaTable } from 'react-icons/fa';
 import {
   BarChart,
@@ -13,17 +13,12 @@ import {
   LabelList,
 } from 'recharts';
 
-// Table de tarifs (coûts par million de tokens) pour vos IA
+// Tarifs définis "par million de tokens" (doivent correspondre à ceux du track usage)
 const modelRates = {
-  'mistral-small-latest': {
-    input: 0.18,
-    output: 0.54,
-    label: 'Mistral Small (24.09)',
-  },
-  'codestral-latest': {
-    input: 0.30,
-    output: 0.90,
-    label: 'Codestral',
+  'gpt-4o-2024-08-06': {
+    input: 2.50,
+    output: 10.00,
+    label: 'GPT-4o',
   },
   'gpt-4o-mini-2024-07-18': {
     input: 0.15,
@@ -35,10 +30,20 @@ const modelRates = {
     output: 4.40,
     label: 'O1 Mini',
   },
-  'gpt-4o-2024-08-06': {
-    input: 2.50,
-    output: 10.00,
-    label: 'GPT-4o',
+  'mistral-large-latest': {
+    input: 1.8,
+    output: 5.4,
+    label: 'Mistral Large (24.11)',
+  },
+  'pixtral-large-latest': {
+    input: 1.8,
+    output: 5.4,
+    label: 'Pixtral Large',
+  },
+  'mistral-small-latest': {
+    input: 0.09,
+    output: 0.3,
+    label: 'Mistral Small 3',
   },
 };
 

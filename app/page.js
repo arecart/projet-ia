@@ -40,7 +40,7 @@ export default function HomePage() {
         credentials: 'include',
       });
       router.push('/login');
-      router.refresh();
+      //Srouter.refresh();
     } catch (error) {
     }
   };

@@ -1,15 +1,14 @@
-// app/api/generate/route.js
 import { NextResponse } from 'next/server';
 import { verify } from '@/utils/jwt';
 import pool from '@/app/db';
 import { handleMistralGeneration } from './mistral/route';
-import { handleGPTGeneration } from './gpt/route';
+import { handle4OGeneration } from './gpt/4o/route';
+import { handle4OMiniGeneration } from './gpt/4oMini/route';
+import { handleO1MiniGeneration } from './gpt/o1-mini/route';
 
 async function getUserFromRequest(request) {
   const token = request.cookies.get('token')?.value;
-  if (!token) {
-    return null;
-  }
+  if (!token) return null;
   try {
     const decoded = await verify(token);
     return decoded;
@@ -21,7 +20,7 @@ async function getUserFromRequest(request) {
 export async function POST(request) {
   try {
     const data = await request.json();
-    const { provider, model, prompt, sessionId, context } = data;
+    const { provider, model, prompt, sessionId, context, image, stream = false } = data;
 
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId requis' }, { status: 400 });
@@ -41,33 +40,51 @@ export async function POST(request) {
     }
 
     const [rows] = await pool.query(
-      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp DESC LIMIT 20',
+      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp DESC LIMIT 50',
       [sessionId]
     );
     const messages = Array.isArray(rows) ? rows.reverse() : (rows ? [rows] : []);
-    const conversationHistory = messages.map(m => `${m.role}: ${m.message}`).join('\n');
 
-    let combinedHistory = conversationHistory;
+    const MAX_CONTEXT_CHARS = 5000;
+    let conversationHistory = '';
+    let charCount = 0;
+
+    for (const msg of messages) {
+      const messageText = `${msg.role}: ${msg.message}\n`;
+      if (charCount + messageText.length <= MAX_CONTEXT_CHARS) {
+        conversationHistory += messageText;
+        charCount += messageText.length;
+      } else {
+        break;
+      }
+    }
+
+    let combinedHistory = conversationHistory.trim();
     if (context && context.trim()) {
-      combinedHistory = combinedHistory
-        ? `${combinedHistory}\n${context}`
-        : context;
+      combinedHistory = combinedHistory ? `${combinedHistory}\n${context}` : context;
     }
 
-    const fullPrompt = combinedHistory
-      ? `${combinedHistory}\nUser: ${prompt}`
-      : prompt;
+    const fullPrompt = combinedHistory ? `${combinedHistory}\nUser: ${prompt}` : `User: ${prompt}`;
 
-    let response;
-    // Ajout de 'pixtral' dans la condition pour rediriger vers handleMistralGeneration
+    console.log('Full prompt généré:', fullPrompt.substring(0, 200) + '...');
+
     if (provider === 'mistral' || provider === 'o3-mini' || provider === 'pixtral') {
-      response = await handleMistralGeneration(request, { model, prompt: fullPrompt });
+      const response = await handleMistralGeneration(request, { model, prompt: fullPrompt, image });
+      return response;
     } else {
-      response = await handleGPTGeneration(request, { model, prompt: fullPrompt });
+      switch (model) {
+        case 'gpt-4o':
+          return handle4OGeneration(request, { model, prompt: fullPrompt, image, stream });
+        case 'gpt-4o-mini-2024-07-18':
+          return handle4OMiniGeneration(request, { model, prompt: fullPrompt, image, stream });
+        case 'o1-mini-2024-09-12':
+          return handleO1MiniGeneration(request, { model, prompt: fullPrompt, image, stream });
+        default:
+          return NextResponse.json({ error: 'Modèle non supporté' }, { status: 400 });
+      }
     }
-
-    return response;
   } catch (error) {
+    console.error('Erreur dans la génération:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

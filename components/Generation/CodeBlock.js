@@ -1,35 +1,48 @@
 'use client';
 import React, { useState } from 'react';
 
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return true;
+  }
+};
+
 function CodeBlock({ className, children }) {
   const [copied, setCopied] = useState(false);
-  // On s'assure que children est bien une chaîne de caractères.
-  const codeText = Array.isArray(children) ? children.join('') : children;
-  
+
+  const codeText = Array.isArray(children)
+    ? children
+        .map((child) =>
+          typeof child === 'string'
+            ? child
+            : child?.props?.children || ''
+        )
+        .join('')
+    : typeof children === 'string'
+      ? children
+      : children?.props?.children || '';
+
   const handleCopy = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(codeText.trim());
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = codeText.trim();
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
+    const success = await copyToClipboard(codeText.trim());
+    if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
     }
   };
 
   return (
     <div className="relative my-2">
-      {/* Fond très sombre pour le bloc de code */}
-      <pre className={`bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto ${className}`}>
-        <code className={className}>{children}</code>
+      <pre className={`bg-gray-900 text-gray-100 p-4 rounded-md overflow-auto ${className || ''}`}>
+        <code>{codeText}</code>
       </pre>
       <button
         onClick={handleCopy}

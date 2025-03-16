@@ -3,74 +3,26 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 
-// Définir les chemins vers vos logos dans le dossier public
 const openaiLogo = "/openai-logo.png";
 const mistralLogo = "/mistral-logo.png";
 
-// Regroupement par entreprise (provider)
-// Le groupe mistral inclut également le modèle Pixtral
 const models = {
   gpt: [
-    {
-      provider: 'gpt',
-      model: 'gpt-4o-mini-2024-07-18',
-      label: 'GPT-4o Mini',
-      icon: openaiLogo,
-      description: 'Modèle léger pour des réponses rapides.'
-    },
-    {
-      provider: 'gpt',
-      model: 'gpt-4o',
-      label: 'GPT-4o',
-      icon: openaiLogo,
-      description: 'Modèle puissant pour des tâches exigeantes.'
-    },
-    {
-      provider: 'gpt',
-      model: 'o1-mini-2024-09-12',
-      label: 'O1 Mini',
-      icon: openaiLogo,
-      description: 'Optimisé pour le raisonnement et l’analyse.'
-    },
+    { provider: 'gpt', model: 'gpt-4o-mini-2024-07-18', label: 'GPT-4o Mini', icon: openaiLogo, description: 'Modèle léger pour des réponses rapides.' },
+    { provider: 'gpt', model: 'gpt-4o', label: 'GPT-4o', icon: openaiLogo, description: 'Modèle puissant pour des tâches exigeantes.' },
+    { provider: 'gpt', model: 'o1-mini-2024-09-12', label: 'O1 Mini', icon: openaiLogo, description: 'Optimisé pour le raisonnement et l’analyse.' },
   ],
   mistral: [
-    {
-      provider: 'mistral',
-      model: 'mistral-small-latest',
-      label: 'Mistral Small 3',
-      icon: mistralLogo,
-      description: 'Modèle léger pour des réponses rapides.'
-    },
-    {
-      provider: 'mistral',
-      model: 'mistral-large-latest',
-      label: 'Mistral Large 24.11',
-      icon: mistralLogo,
-      description: 'Modèle puissant pour des tâches exigeantes.'
-    },
-    {
-      provider: 'mistral',
-      model: 'pixtral-large-latest',
-      label: 'Pixtral Large',
-      icon: mistralLogo,
-      description: 'Optimisé pour le raisonnement et l’analyse.'
-    },
-  ]
+    { provider: 'mistral', model: 'mistral-small-latest', label: 'Mistral Small 3', icon: mistralLogo, description: 'Modèle léger pour des réponses rapides.' },
+    { provider: 'mistral', model: 'mistral-large-latest', label: 'Mistral Large 24.11', icon: mistralLogo, description: 'Modèle puissant pour des tâches exigeantes.' },
+    { provider: 'mistral', model: 'pixtral-large-latest', label: 'Pixtral Large', icon: mistralLogo, description: 'Optimisé pour le raisonnement et l’analyse.' },
+  ],
 };
 
-export default function AISelector({
-  selectedProvider,
-  selectedModel,
-  onProviderChange,
-  onModelChange,
-  debug = false,
-}) {
+export default function AISelector({ selectedProvider, selectedModel, onProviderChange, onModelChange, debug = false }) {
   const [isPopupOpen, setPopupOpen] = useState(false);
-  // Aplatir tous les modèles pour retrouver celui sélectionné
   const allModels = Object.values(models).flat();
-  const selectedAI =
-    allModels.find((ai) => ai.provider === selectedProvider && ai.model === selectedModel) ||
-    allModels[0];
+  const selectedAI = allModels.find((ai) => ai.provider === selectedProvider && ai.model === selectedModel) || allModels[0];
 
   const handleSelectAI = (ai) => {
     onProviderChange(ai.provider);
@@ -80,11 +32,7 @@ export default function AISelector({
 
   const popupContent = (
     <div className="fixed inset-0 z-[11000] flex items-center justify-center">
-      {/* Overlay semi-transparent */}
-      <div
-        className="absolute inset-0 bg-black opacity-70 backdrop-blur-sm"
-        onClick={() => setPopupOpen(false)}
-      ></div>
+      <div className="absolute inset-0 bg-black opacity-70 backdrop-blur-sm" onClick={() => setPopupOpen(false)}></div>
       <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 relative w-11/12 max-w-4xl animate-slideIn">
         <button
           onClick={() => setPopupOpen(false)}
@@ -93,10 +41,7 @@ export default function AISelector({
         >
           ✕
         </button>
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">
-          Sélectionnez une IA
-        </h3>
-        {/* Affichage horizontal des groupes */}
+        <h3 className="text-2xl font-bold text-white mb-6 text-center">Sélectionnez une IA</h3>
         <div className="flex gap-6">
           {Object.entries(models).map(([providerName, providerModels]) => (
             <div key={providerName} className="flex-1">
@@ -129,9 +74,7 @@ export default function AISelector({
 
   return (
     <div className="relative z-[10000]">
-      <label className="block text-gray-300 font-semibold mb-2">
-        Choisissez votre IA :
-      </label>
+      <label className="block text-gray-300 font-semibold mb-2">Choisissez votre IA :</label>
       <button
         onClick={() => setPopupOpen(true)}
         className="w-full p-4 modern-button rounded-lg text-white text-left flex items-center gap-3 shadow glass-morphism"

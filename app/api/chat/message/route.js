@@ -16,7 +16,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
     const skip = Number(searchParams.get('skip')) || 0;
-    const take = Number(searchParams.get('take')) || 20;
+    const take = Number(searchParams.get('take')) || 50;
 
     if (!sessionId) {
       return new Response(
@@ -25,18 +25,10 @@ export async function GET(request) {
       );
     }
 
-    // Récupération des messages, triés par timestamp ASC
     const messages = await pool.query(
-      `SELECT * FROM (
-        SELECT * FROM ChatMessage 
-        WHERE session_id = ? 
-        ORDER BY timestamp DESC 
-        LIMIT ?
-      ) AS subquery 
-      ORDER BY timestamp ASC`,
-      [sessionId, take]
+      'SELECT * FROM ChatMessage WHERE session_id = ? ORDER BY timestamp ASC LIMIT ?, ?',
+      [sessionId, skip, take]
     );
-    
     return new Response(
       JSON.stringify({ messages }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -58,7 +50,11 @@ export async function POST(request) {
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       );
     }
-    const { sessionId, role, message } = await request.json();
+
+    // Récupération des données envoyées dans le corps de la requête
+    const { sessionId, role, message, image, attachments } = await request.json();
+
+    // Validation des champs requis
     if (!sessionId || !role || !message) {
       return new Response(
         JSON.stringify({ error: 'Données manquantes' }),
@@ -66,10 +62,10 @@ export async function POST(request) {
       );
     }
 
-    // Utilisation de user.userId pour associer le message à l'utilisateur connecté
+    // Insertion du message avec les champs optionnels (image et attachments)
     const result = await pool.query(
-      'INSERT INTO ChatMessage (session_id, user_id, role, message) VALUES (?, ?, ?, ?)',
-      [sessionId, user.userId, role, message]
+      'INSERT INTO ChatMessage (session_id, user_id, role, message, image, attachments) VALUES (?, ?, ?, ?, ?, ?)',
+      [sessionId, user.userId, role, message, image || null, attachments || null]
     );
 
     // Récupération du message créé
@@ -77,6 +73,7 @@ export async function POST(request) {
       'SELECT * FROM ChatMessage WHERE id = ?',
       [result.insertId]
     );
+
     return new Response(
       JSON.stringify({ success: true, message: createdMessage }),
       { status: 201, headers: { 'Content-Type': 'application/json' } }

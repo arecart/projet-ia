@@ -1,3 +1,7 @@
+projet_ia
+
+
+
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
@@ -67,5 +71,9 @@ CREATE TABLE ChatMessage (
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (session_id) REFERENCES ChatSession(id),
   INDEX idx_session_id (session_id),
-  INDEX idx_timestamp (timestamp)
+  INDEX idx_timestamp (timestamp),
+  provider VARCHAR(50) DEFAULT 'gpt'
 );
+ALTER TABLE ChatMessage ADD COLUMN attachments TEXT;
+ALTER TABLE ChatMessage
+    -> ADD COLUMN image TEXT;

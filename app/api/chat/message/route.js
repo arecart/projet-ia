@@ -52,10 +52,14 @@ export async function POST(request) {
     }
 
     // Récupération des données envoyées dans le corps de la requête
-    const { sessionId, role, message, image, attachments } = await request.json();
+    const body = await request.json();
+    console.log('Données reçues:', body); // Ajout d'un log pour débogage
+
+    const { sessionId, role, message, image, attachments } = body;
 
     // Validation des champs requis
     if (!sessionId || !role || !message) {
+      console.error('Champs manquants:', { sessionId, role, message }); // Log des champs manquants
       return new Response(
         JSON.stringify({ error: 'Données manquantes' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -79,6 +83,7 @@ export async function POST(request) {
       { status: 201, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('Erreur dans POST /api/chat/message:', error); // Log de l'erreur complète
     return new Response(
       JSON.stringify({ error: 'Erreur serveur lors de l’ajout du message.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

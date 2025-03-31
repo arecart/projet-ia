@@ -11,6 +11,7 @@ const models = {
     { provider: 'gpt', model: 'gpt-4o-mini-2024-07-18', label: 'GPT-4o Mini', icon: openaiLogo, description: 'Modèle léger pour des réponses rapides.' },
     { provider: 'gpt', model: 'gpt-4o', label: 'GPT-4o', icon: openaiLogo, description: 'Modèle puissant pour des tâches exigeantes.' },
     { provider: 'gpt', model: 'o1-mini-2024-09-12', label: 'O1 Mini', icon: openaiLogo, description: 'Optimisé pour le raisonnement et l’analyse.' },
+    { provider: 'gpt', model: 'dall-e-3', label: 'DALL-E 3', icon: openaiLogo, description: 'Générateur d’images à partir de texte ou d’images.' }, // Added DALL-E 3
   ],
   mistral: [
     { provider: 'mistral', model: 'mistral-small-latest', label: 'Mistral Small 3', icon: mistralLogo, description: 'Modèle léger pour des réponses rapides.' },

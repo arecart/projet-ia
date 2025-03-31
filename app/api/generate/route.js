@@ -5,6 +5,7 @@ import { handleMistralGeneration } from './mistral/route';
 import { handle4OGeneration } from './gpt/4o/route';
 import { handle4OMiniGeneration } from './gpt/4oMini/route';
 import { handleO1MiniGeneration } from './gpt/o1-mini/route';
+import { handleDallEGeneration } from './gpt/DALL-E-3/route';
 
 async function getUserFromRequest(request) {
   const token = request.cookies.get('token')?.value;
@@ -77,8 +78,8 @@ export async function POST(request) {
           return handle4OGeneration(request, { model, prompt: fullPrompt, image, stream });
         case 'gpt-4o-mini-2024-07-18':
           return handle4OMiniGeneration(request, { model, prompt: fullPrompt, image, stream });
-        case 'o1-mini-2024-09-12':
-          return handleO1MiniGeneration(request, { model, prompt: fullPrompt, image, stream });
+        case 'dall-e-3':
+          return handleDallEGeneration(request, { model, prompt: fullPrompt, image });
         default:
           return NextResponse.json({ error: 'Modèle non supporté' }, { status: 400 });
       }

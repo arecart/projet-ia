@@ -30,7 +30,7 @@ function ChatInterface({ onLogout, onDashboard, role = 'user' }) {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [streamingMessage, setStreamingMessage] = useState('');
-  const supportsImage = ['gpt-4o', 'gpt-4o-mini-2024-07-18'].includes(selectedModel);
+  const supportsImage = ['gpt-4o', 'gpt-4o-mini-2024-07-18', 'dall-e-3'].includes(selectedModel);
 
   // Fonction pour ajouter des espaces entre les mots
   function addSpacesToText(text) {
